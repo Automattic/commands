@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "build": "tsup",
-    "dev": "vite --config playground/vite.config.ts",
+    "dev": "tsup && vite --config playground/vite.config.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
