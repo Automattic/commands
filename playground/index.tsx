@@ -2,6 +2,7 @@
 
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+
 import { Command } from '@automattic/commands';
 
 function App() {
@@ -30,7 +31,12 @@ function App() {
 	);
 }
 
-createRoot( document.getElementById( 'root' )! ).render(
+const rootEl = document.getElementById( 'root' );
+if ( ! rootEl ) {
+	throw new Error( 'Missing #root element in playground/index.html' );
+}
+
+createRoot( rootEl ).render(
 	<StrictMode>
 		<App />
 	</StrictMode>
