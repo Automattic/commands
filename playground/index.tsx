@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic */
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Command } from '../src';
