@@ -9,10 +9,9 @@ export default defineConfig( ( { mode } ) => ( {
 	root: __dirname,
 	resolve: {
 		alias: {
-			'@automattic/commands': new URL(
-				mode === 'dist' ? '../dist/index.js' : '../src/index.ts',
-				import.meta.url
-			).pathname,
+			'@automattic/commands': fileURLToPath(
+				new URL( mode === 'dist' ? '../dist/index.js' : '../src/index.ts', import.meta.url )
+			),
 		},
 	},
 } ) );
