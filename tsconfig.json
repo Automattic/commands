@@ -2,7 +2,8 @@
   "extends": "./tsconfig.build.json",
   "compilerOptions": {
     "rootDir": ".",
-    "noEmit": true
+    "noEmit": true,
+    "types": [ "vitest/globals", "@testing-library/jest-dom" ]
   },
   "include": [ "src", "playground", "*.config.ts", "vitest.setup.ts" ]
 }
