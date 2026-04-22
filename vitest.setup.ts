@@ -2,7 +2,7 @@ import '@testing-library/jest-dom/vitest';
 
 // jsdom does not implement ResizeObserver; cmdk requires it.
 global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
+	observe() {}
+	unobserve() {}
+	disconnect() {}
 };
