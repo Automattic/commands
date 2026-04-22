@@ -23,6 +23,7 @@
   ],
   "scripts": {
     "build": "tsup",
+    "dev": "vite --config playground/vite.config.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -40,15 +41,19 @@
     "@testing-library/react": "^16.3.0",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^6.0.1",
     "jsdom": "^26.1.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
+    "vite": "^8.0.9",
     "vitest": "^3.1.2"
   },
   "packageManager": "pnpm@10.14.0",
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }
