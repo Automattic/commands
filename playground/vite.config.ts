@@ -4,12 +4,15 @@ import { defineConfig } from 'vite';
 
 const __dirname = fileURLToPath( new URL( '.', import.meta.url ) );
 
-export default defineConfig( {
+export default defineConfig( ( { mode } ) => ( {
 	plugins: [ react() ],
 	root: __dirname,
 	resolve: {
 		alias: {
-			'@automattic/commands': new URL( '../dist/index.js', import.meta.url ).pathname,
+			'@automattic/commands': new URL(
+				mode === 'dist' ? '../dist/index.js' : '../src/index.ts',
+				import.meta.url
+			).pathname,
 		},
 	},
-} );
+} ) );
