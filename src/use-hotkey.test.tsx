@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
+import { dispatchKey } from './test-utils';
 import { useHotkey } from './use-hotkey';
 
 function setPlatform( platform: string ): void {
@@ -8,27 +9,6 @@ function setPlatform( platform: string ): void {
 		value: platform,
 		configurable: true,
 	} );
-}
-
-interface KeyModifiers {
-	meta?: boolean;
-	ctrl?: boolean;
-	shift?: boolean;
-	alt?: boolean;
-}
-
-function dispatchKey( key: string, modifiers: KeyModifiers = {} ): void {
-	document.dispatchEvent(
-		new KeyboardEvent( 'keydown', {
-			key,
-			metaKey: modifiers.meta ?? false,
-			ctrlKey: modifiers.ctrl ?? false,
-			shiftKey: modifiers.shift ?? false,
-			altKey: modifiers.alt ?? false,
-			bubbles: true,
-			cancelable: true,
-		} )
-	);
 }
 
 const originalPlatform = navigator.platform;

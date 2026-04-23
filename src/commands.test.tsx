@@ -1,30 +1,8 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
 import { Commands } from './commands';
-
-interface KeyModifiers {
-	meta?: boolean;
-	ctrl?: boolean;
-	shift?: boolean;
-	alt?: boolean;
-}
-
-function dispatchKey( key: string, modifiers: KeyModifiers = {} ): void {
-	act( () => {
-		document.dispatchEvent(
-			new KeyboardEvent( 'keydown', {
-				key,
-				metaKey: modifiers.meta ?? false,
-				ctrlKey: modifiers.ctrl ?? false,
-				shiftKey: modifiers.shift ?? false,
-				altKey: modifiers.alt ?? false,
-				bubbles: true,
-				cancelable: true,
-			} )
-		);
-	} );
-}
+import { dispatchKey } from './test-utils';
 
 describe( 'Commands', () => {
 	it( 'renders without crashing', () => {
