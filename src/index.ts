@@ -1,1 +1,2 @@
-export { Command } from 'cmdk';
+export { Commands } from './commands';
+export type { CommandsProps } from './types';
