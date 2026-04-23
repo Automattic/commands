@@ -1,7 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
-import { dispatchKey } from './test-utils';
+import { dispatchKey } from '../test-utils';
 import { useHotkey } from './use-hotkey';
 
 describe( 'useHotkey', () => {

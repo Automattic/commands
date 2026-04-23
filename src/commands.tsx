@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { useHotkey } from './use-hotkey';
+import { useHotkey } from './hooks/use-hotkey';
 import { validateCommands } from './validate-commands';
 
 import type { CommandsProps } from './types';
