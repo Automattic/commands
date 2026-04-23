@@ -3,11 +3,15 @@ import type { Command } from './types';
 /**
  * Validates an array of command definitions at runtime.
  *
- * Each invalid entry produces a `console.warn` with the offending command ID.
+ * Each invalid entry produces a `console.warn` describing the problem, including
+ * the offending command ID when available.
  * Only runs when `process.env.NODE_ENV !== 'production'`.
+ *
+ * The input type is `Partial< Command >[]` so that runtime checks remain
+ * meaningful for plain-JS consumers and dynamic data (e.g. JSON configs).
  */
-export function validateCommands( commands: Command[] ): void {
-	if ( process.env.NODE_ENV === 'production' ) {
+export function validateCommands( commands: Partial< Command >[] ): void {
+	if ( typeof process !== 'undefined' && process.env.NODE_ENV === 'production' ) {
 		return;
 	}
 
@@ -26,11 +30,13 @@ export function validateCommands( commands: Command[] ): void {
 			console.warn( `[@automattic/commands] Command "${ id }" has an empty or missing "title".` );
 		}
 
-		if ( seenIds.has( id ) ) {
+		if ( id && seenIds.has( id ) ) {
 			// eslint-disable-next-line no-console
 			console.warn( `[@automattic/commands] Duplicate command id "${ id }".` );
 		}
-		seenIds.add( id );
+		if ( id ) {
+			seenIds.add( id );
+		}
 
 		const hasRoute = command.route !== undefined;
 		const hasAction = command.action !== undefined;

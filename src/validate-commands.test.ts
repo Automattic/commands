@@ -90,6 +90,12 @@ describe( 'validateCommands', () => {
 		expect( warnSpy ).not.toHaveBeenCalled();
 	} );
 
+	it( 'warns on a bare partial object with no fields', () => {
+		validateCommands( [ {} ] );
+		// missing id, missing title, missing route+action
+		expect( warnSpy ).toHaveBeenCalledTimes( 3 );
+	} );
+
 	it( 'validates all commands, not just the first', () => {
 		validateCommands( [
 			makeCommand( { id: 'valid-1' } ),

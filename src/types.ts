@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 export interface Command {
 	/** Unique identifier (also used for recency tracking) */
 	id: string;
@@ -21,7 +23,7 @@ export interface Command {
 	keywords?: string[];
 
 	/** Icon component or element */
-	icon?: React.ReactNode;
+	icon?: ReactNode;
 
 	/** Keyboard shortcut hint shown in UI: "⌘L" */
 	shortcut?: string;
@@ -56,7 +58,7 @@ export interface CommandsProps {
 	filter?: ( value: string, search: string ) => number;
 
 	/** Custom empty state content shown when no commands match the search */
-	emptyState?: React.ReactNode;
+	emptyState?: ReactNode;
 
 	/** Show recently selected commands when search is empty. Default: `true` */
 	showRecent?: boolean;
