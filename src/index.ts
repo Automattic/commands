@@ -1,2 +1,2 @@
 export { Commands } from './commands';
-export type { CommandsProps } from './types';
+export type { Command, CommandsProps } from './types';

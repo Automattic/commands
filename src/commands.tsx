@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 
-import { CommandsProps } from './types';
 import { validateCommands } from './validate-commands';
+
+import type { CommandsProps } from './types';
 
 function Commands( props: CommandsProps ) {
 	const { commands } = props;
