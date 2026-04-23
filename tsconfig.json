@@ -3,7 +3,10 @@
   "compilerOptions": {
     "rootDir": ".",
     "noEmit": true,
-    "types": [ "vitest/globals", "@testing-library/jest-dom" ]
+    "types": [ "vitest/globals", "@testing-library/jest-dom" ],
+    "paths": {
+      "@automattic/commands": [ "./src/index.ts" ]
+    }
   },
   "include": [ "src", "playground", "*.config.ts", "vitest.setup.ts" ]
 }
