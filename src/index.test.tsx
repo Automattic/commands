@@ -1,19 +1,20 @@
-import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
-import { Command } from './index';
+import { validateCommands } from './index';
 
-describe( 'Command', () => {
-	it( 'renders without crashing', () => {
-		render(
-			<Command>
-				<Command.Input placeholder="Search..." />
-				<Command.List>
-					<Command.Empty>No results</Command.Empty>
-				</Command.List>
-			</Command>
-		);
+import type { Command } from './index';
 
-		expect( screen.getByPlaceholderText( 'Search...' ) ).toBeInTheDocument();
+describe( 'public API', () => {
+	it( 'exports validateCommands', () => {
+		expect( typeof validateCommands ).toBe( 'function' );
+	} );
+
+	it( 'Command type is usable', () => {
+		const cmd: Command = {
+			id: 'test',
+			title: 'Test',
+			route: '/test',
+		};
+		expect( cmd.id ).toBe( 'test' );
 	} );
 } );

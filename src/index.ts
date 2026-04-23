@@ -1,1 +1,2 @@
-export { Command } from 'cmdk';
+export type { Command } from './types';
+export { validateCommands } from './validate-commands';
