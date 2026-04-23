@@ -1,3 +1,3 @@
-export { Command } from 'cmdk';
-export type { Command as CommandDef, CommandsProps } from './types';
+export { Command as CommandBase } from 'cmdk';
+export type { Command, CommandsProps } from './types';
 export { validateCommands } from './validate-commands';

@@ -1,17 +1,17 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 
-import { Command, validateCommands } from './index';
+import { CommandBase, validateCommands } from './index';
 
-describe( 'Command', () => {
+describe( 'CommandBase', () => {
 	it( 'renders without crashing', () => {
 		render(
-			<Command>
-				<Command.Input placeholder="Search..." />
-				<Command.List>
-					<Command.Empty>No results</Command.Empty>
-				</Command.List>
-			</Command>
+			<CommandBase>
+				<CommandBase.Input placeholder="Search..." />
+				<CommandBase.List>
+					<CommandBase.Empty>No results</CommandBase.Empty>
+				</CommandBase.List>
+			</CommandBase>
 		);
 
 		expect( screen.getByPlaceholderText( 'Search...' ) ).toBeInTheDocument();
