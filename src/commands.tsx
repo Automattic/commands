@@ -1,3 +1,5 @@
+import * as Dialog from '@radix-ui/react-dialog';
+import { Root as VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Command as CommandPrimitive } from 'cmdk';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -69,6 +71,10 @@ function Commands( {
 			filter={ filter }
 			loop
 		>
+			<VisuallyHidden>
+				<Dialog.Title>Command palette</Dialog.Title>
+				<Dialog.Description>Search and run commands</Dialog.Description>
+			</VisuallyHidden>
 			<div data-cmdk-input-wrapper="">
 				<SearchIcon />
 				<CommandPrimitive.Input placeholder={ placeholder } />
