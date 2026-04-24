@@ -1,23 +1,106 @@
-import { useEffect, useState } from 'react';
+import { Command as CommandPrimitive } from 'cmdk';
+import { useEffect, useMemo, useState } from 'react';
 
+import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
 import { validateCommands } from './validate-commands';
 
-import type { CommandsProps } from './types';
+import type { Command, CommandsProps } from './types';
+import './theme.css';
 
-function Commands( props: CommandsProps ) {
-	const { commands, triggerKey = 'Mod+k' } = props;
-	const [ isOpen, setIsOpen ] = useState( false );
+function SearchIcon() {
+	return (
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="18"
+			height="18"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			strokeLinejoin="round"
+			aria-hidden="true"
+		>
+			<circle cx="11" cy="11" r="8" />
+			<line x1="21" y1="21" x2="16.65" y2="16.65" />
+		</svg>
+	);
+}
 
+/* ---------- Commands component ---------- */
+
+function Commands( {
+	commands,
+	placeholder = 'Search commands...',
+	filter,
+	emptyState,
+	triggerKey = 'Mod+k',
+}: CommandsProps ) {
+	const [ open, setOpen ] = useState( false );
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
 
 	useHotkey( triggerKey, () => {
-		setIsOpen( true );
+		setOpen( prev => ! prev );
 	} );
 
-	return <div data-open={ isOpen }>Work in progress...</div>;
+	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
+
+	return (
+		<CommandPrimitive.Dialog
+			open={ open }
+			onOpenChange={ setOpen }
+			label="Command palette"
+			filter={ filter }
+			loop
+		>
+			<div data-cmdk-input-wrapper="">
+				<SearchIcon />
+				<CommandPrimitive.Input placeholder={ placeholder } />
+			</div>
+			<CommandPrimitive.List>
+				<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
+				{ Array.from( grouped.entries() ).map( ( [ group, items ] ) =>
+					group ? (
+						<CommandPrimitive.Group key={ group } heading={ group }>
+							{ items.map( item => (
+								<CommandItem key={ item.id } command={ item } onSelect={ () => setOpen( false ) } />
+							) ) }
+						</CommandPrimitive.Group>
+					) : (
+						items.map( item => (
+							<CommandItem key={ item.id } command={ item } onSelect={ () => setOpen( false ) } />
+						) )
+					)
+				) }
+			</CommandPrimitive.List>
+		</CommandPrimitive.Dialog>
+	);
+}
+
+function CommandItem( { command, onSelect }: { command: Command; onSelect: () => void } ) {
+	const typeLabel = command.route ? 'Link' : 'Action';
+
+	return (
+		<CommandPrimitive.Item
+			value={ command.title }
+			keywords={ command.keywords }
+			onSelect={ onSelect }
+		>
+			{ command.icon && <span data-slot="icon">{ command.icon }</span> }
+			<span data-slot="label">
+				<span data-slot="title">{ command.title }</span>
+				{ command.description && <span data-slot="description">{ command.description }</span> }
+			</span>
+			{ command.shortcut ? (
+				<span data-slot="shortcut">{ command.shortcut }</span>
+			) : (
+				<span data-slot="type">{ typeLabel }</span>
+			) }
+		</CommandPrimitive.Item>
+	);
 }
 
 export { Commands };
