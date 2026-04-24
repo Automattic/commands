@@ -253,6 +253,32 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'resets search when closing and reopening the palette', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+			typeSearch( 'dash' );
+
+			expect( screen.getByPlaceholderText( 'Search commands...' ) ).toHaveValue( 'dash' );
+
+			await waitFor( () => {
+				expect( screen.queryByText( 'Recently Used' ) ).not.toBeInTheDocument();
+			} );
+
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+
+			await openPaletteAndWait();
+
+			expect( screen.getByPlaceholderText( 'Search commands...' ) ).toHaveValue( '' );
+			expect( screen.getByText( 'Recently Used' ) ).toBeInTheDocument();
+		} );
+
 		it( 'does not render recently used commands when showRecent is false', async () => {
 			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" showRecent={ false } /> );
 			await openPaletteAndWait();

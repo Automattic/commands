@@ -50,22 +50,35 @@ function Commands( {
 		validateCommands( commands );
 	}, [ commands ] );
 
+	const resetSearch = useCallback( () => {
+		setSearch( '' );
+	}, [] );
+
+	const closePalette = useCallback( () => {
+		resetSearch();
+		setOpen( false );
+	}, [ resetSearch ] );
+
 	useHotkey( triggerKey, () => {
 		setOpen( prevOpen => {
 			const nextOpen = ! prevOpen;
 			if ( ! nextOpen ) {
-				setSearch( '' );
+				resetSearch();
 			}
 			return nextOpen;
 		} );
 	} );
 
-	const handleOpenChange = useCallback( ( nextOpen: boolean ) => {
-		if ( ! nextOpen ) {
-			setSearch( '' );
-		}
-		setOpen( nextOpen );
-	}, [] );
+	const handleOpenChange = useCallback(
+		( nextOpen: boolean ) => {
+			if ( nextOpen ) {
+				setOpen( true );
+				return;
+			}
+			closePalette();
+		},
+		[ closePalette ]
+	);
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
 	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
@@ -82,10 +95,9 @@ function Commands( {
 			} else {
 				item.action?.();
 			}
-			setSearch( '' );
-			setOpen( false );
+			closePalette();
 		},
-		[ addRecent, onNavigate ]
+		[ addRecent, closePalette, onNavigate ]
 	);
 
 	return (
