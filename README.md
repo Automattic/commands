@@ -25,20 +25,58 @@ pnpm install
 ## Usage
 
 ```tsx
-import { Command } from '@automattic/commands';
+import { Commands } from '@automattic/commands';
+
+import type { Command } from '@automattic/commands';
+
+const commands: Command[] = [
+	{
+		id: 'dashboard',
+		title: 'Dashboard',
+		route: '/dashboard',
+		group: 'Pages',
+		keywords: [ 'home', 'overview' ],
+	},
+	{
+		id: 'clear-cache',
+		title: 'Clear cache',
+		action: () => console.log( 'Clearing cache' ),
+		group: 'Actions',
+		shortcut: '⌘E',
+	},
+];
 
 function App() {
 	return (
-		<Command>
-			<Command.Input placeholder="Search..." />
-			<Command.List>
-				<Command.Empty>No results</Command.Empty>
-				<Command.Item>Item</Command.Item>
-			</Command.List>
-		</Command>
+		<Commands
+			commands={ commands }
+			onNavigate={ path => {
+				window.location.assign( path );
+			} }
+		/>
 	);
 }
 ```
+
+The palette opens with `Mod+k` by default, which maps to Command on macOS and Control elsewhere.
+
+## Theming
+
+`@automattic/commands` includes a default theme, so consumers do not need to import a separate stylesheet. The theme uses `cmdk-*` attribute selectors and exposes `--cmdk-*` CSS custom properties for overrides.
+
+```css
+:root {
+	--cmdk-bg: #fff;
+	--cmdk-text: #1e1e1e;
+	--cmdk-border: #dcdcde;
+	--cmdk-radius: 4px;
+	--cmdk-max-height: 360px;
+	--cmdk-item-selected-bg: #f6f7f7;
+	--cmdk-item-selected-indicator: #3858e9;
+}
+```
+
+The default theme is WPDS-aware, meaning it can use WordPress Design System CSS variables when they are available, without taking a package dependency on WPDS. If those variables are not present, the theme falls back to neutral static values.
 
 ### Peer Dependencies
 
