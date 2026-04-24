@@ -45,7 +45,11 @@ export interface CommandsProps {
 	/** Called when a route command is selected with the fully resolved path */
 	onNavigate?: ( path: string ) => void;
 
-	/** Keyboard shortcut to open the palette. Default: `"Meta+k"` */
+	/**
+	 * Keyboard shortcut to open the palette. Default: `"Mod+k"`
+	 * (Cmd on macOS, Ctrl elsewhere). Modifiers are joined with `+`, e.g.
+	 * `"Meta+k"`, `"Ctrl+Shift+p"`.
+	 */
 	triggerKey?: string;
 
 	/** Placeholder text for the search input. Default: `"Search commands..."` */
