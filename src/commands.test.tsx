@@ -334,6 +334,29 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'matches titles when the command id differs from the display text', async () => {
+			const commands = [
+				cmd( {
+					id: 'logout',
+					title: 'Log out',
+					action: () => {},
+					route: undefined,
+				} ),
+			];
+			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Log out' ) ).toBeInTheDocument();
+			} );
+
+			typeSearch( 'Log out' );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Log out' ) ).toBeInTheDocument();
+			} );
+		} );
+
 		it( 'matches on keywords', async () => {
 			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" /> );
 			openPalette();

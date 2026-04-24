@@ -168,9 +168,10 @@ interface CommandItemProps {
 
 function CommandItem( { command, value = command.id, onSelect }: CommandItemProps ) {
 	const typeLabel = command.route ? 'Link' : 'Action';
+	const keywords = [ command.title, ...( command.keywords ?? [] ) ];
 
 	return (
-		<CommandPrimitive.Item value={ value } keywords={ command.keywords } onSelect={ onSelect }>
+		<CommandPrimitive.Item value={ value } keywords={ keywords } onSelect={ onSelect }>
 			{ command.icon && <span data-slot="icon">{ command.icon }</span> }
 			<span data-slot="label">
 				<span data-slot="title">{ command.title }</span>
