@@ -19,6 +19,9 @@
     },
     "./style.css": "./dist/theme.css"
   },
+  "sideEffects": [
+    "**/*.css"
+  ],
   "files": [
     "dist"
   ],

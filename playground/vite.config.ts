@@ -9,9 +9,6 @@ export default defineConfig( ( { mode } ) => ( {
 	root: __dirname,
 	resolve: {
 		alias: {
-			'@automattic/commands/style.css': fileURLToPath(
-				new URL( mode === 'dist' ? '../dist/theme.css' : '../src/theme.css', import.meta.url )
-			),
 			'@automattic/commands': fileURLToPath(
 				new URL( mode === 'dist' ? '../dist/index.js' : '../src/index.ts', import.meta.url )
 			),
