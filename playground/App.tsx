@@ -22,7 +22,7 @@ const commands: Command[] = [
 	{
 		id: 'projects',
 		title: 'Projects',
-		action: () => undefined,
+		action: () => console.log( 'Projects' ),
 		group: 'Home',
 		icon: '\u2630',
 	},
@@ -44,7 +44,7 @@ const commands: Command[] = [
 	{
 		id: 'logout',
 		title: 'Log out',
-		action: () => undefined,
+		action: () => console.log( 'Log out' ),
 		group: 'Other',
 		icon: '\u21A6',
 	},
@@ -57,7 +57,11 @@ export function App() {
 			<p>
 				Press <kbd>Mod+k</kbd> to open the command palette.
 			</p>
-			<Commands commands={ commands } triggerKey="Mod+k" />
+			<Commands
+				commands={ commands }
+				triggerKey="Mod+k"
+				onNavigate={ path => console.log( 'Navigating to', path ) }
+			/>
 		</div>
 	);
 }

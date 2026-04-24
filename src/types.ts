@@ -14,7 +14,7 @@ export interface Command {
 	route?: string;
 
 	/** Callback for non-route commands (mutually exclusive with route) */
-	action?: () => void | Promise< void >;
+	action?: () => void;
 
 	/** Group label for visual sections: "Pages", "Actions" */
 	group?: string;

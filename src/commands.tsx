@@ -1,5 +1,5 @@
 import { Command as CommandPrimitive } from 'cmdk';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
@@ -36,6 +36,7 @@ function Commands( {
 	filter,
 	emptyState,
 	triggerKey = 'Mod+k',
+	onNavigate,
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
 	useEffect( () => {
@@ -47,6 +48,18 @@ function Commands( {
 	} );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
+
+	const handleSelect = useCallback(
+		( item: Command ) => {
+			if ( item.route ) {
+				onNavigate?.( item.route );
+			} else {
+				item.action?.();
+			}
+			setOpen( false );
+		},
+		[ onNavigate ]
+	);
 
 	return (
 		<CommandPrimitive.Dialog
@@ -66,12 +79,20 @@ function Commands( {
 					group ? (
 						<CommandPrimitive.Group key={ group } heading={ group }>
 							{ items.map( item => (
-								<CommandItem key={ item.id } command={ item } onSelect={ () => setOpen( false ) } />
+								<CommandItem
+									key={ item.id }
+									command={ item }
+									onSelect={ () => handleSelect( item ) }
+								/>
 							) ) }
 						</CommandPrimitive.Group>
 					) : (
 						items.map( item => (
-							<CommandItem key={ item.id } command={ item } onSelect={ () => setOpen( false ) } />
+							<CommandItem
+								key={ item.id }
+								command={ item }
+								onSelect={ () => handleSelect( item ) }
+							/>
 						) )
 					)
 				) }
@@ -80,15 +101,15 @@ function Commands( {
 	);
 }
 
-function CommandItem( { command, onSelect }: { command: Command; onSelect: () => void } ) {
+interface CommandItemProps {
+	command: Command;
+	onSelect: () => void;
+}
+function CommandItem( { command, onSelect }: CommandItemProps ) {
 	const typeLabel = command.route ? 'Link' : 'Action';
 
 	return (
-		<CommandPrimitive.Item
-			value={ command.title }
-			keywords={ command.keywords }
-			onSelect={ onSelect }
-		>
+		<CommandPrimitive.Item value={ command.id } keywords={ command.keywords } onSelect={ onSelect }>
 			{ command.icon && <span data-slot="icon">{ command.icon }</span> }
 			<span data-slot="label">
 				<span data-slot="title">{ command.title }</span>
