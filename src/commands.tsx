@@ -51,12 +51,13 @@ function Commands( {
 	}, [ commands ] );
 
 	useHotkey( triggerKey, () => {
-		if ( open ) {
-			setSearch( '' );
-			setOpen( false );
-		} else {
-			setOpen( true );
-		}
+		setOpen( prevOpen => {
+			const nextOpen = ! prevOpen;
+			if ( ! nextOpen ) {
+				setSearch( '' );
+			}
+			return nextOpen;
+		} );
 	} );
 
 	const handleOpenChange = useCallback( ( nextOpen: boolean ) => {
