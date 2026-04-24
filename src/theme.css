@@ -6,71 +6,58 @@
 }
 
 [cmdk-dialog] {
-	--cmdk-dialog-width: 640px;
-	--cmdk-dialog-margin: 32px;
-	--cmdk-dialog-top: 14vh;
-	--cmdk-dialog-border-width: 1px;
-	--cmdk-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial,
-		sans-serif;
-	--cmdk-input-height: 52px;
-	--cmdk-input-padding-x: 16px;
-	--cmdk-input-icon-size: 18px;
-	--cmdk-input-icon-gap: 12px;
-	--cmdk-list-padding: 8px;
-	--cmdk-group-heading-padding-x: 12px;
-	--cmdk-group-heading-padding-y: 8px;
-	--cmdk-item-gap: 12px;
-	--cmdk-item-padding-x: 12px;
-	--cmdk-item-padding-y: 10px;
-	--cmdk-item-radius: 4px;
-	--cmdk-icon-size: 20px;
-	--cmdk-icon-color: var( --wpds-color-fg-content-neutral-subtle, #646970 );
-	--cmdk-description: var( --wpds-color-fg-content-neutral-subtle, #646970 );
-	--cmdk-shortcut-bg: var( --wpds-color-bg-surface-neutral-weak, #f6f7f7 );
-	--cmdk-shortcut-border: var( --wpds-color-stroke-surface-neutral-weak, #dcdcde );
-	--cmdk-shortcut-text: var( --wpds-color-fg-content-neutral-subtle, #646970 );
-	--cmdk-focus: var( --wpds-color-focus, #3858e9 );
-	--cmdk-input-focus-shadow: inset 0 -1px 0 var( --cmdk-focus );
-	--cmdk-muted-text: var( --wpds-color-fg-content-neutral-subtle, #646970 );
-	--cmdk-transition-duration: 100ms;
-
 	position: fixed;
-	top: var( --cmdk-dialog-top );
+	top: var( --cmdk-dialog-top, 14vh );
 	left: 50%;
 	transform: translateX( -50% );
-	width: min( var( --cmdk-dialog-width ), calc( 100vw - var( --cmdk-dialog-margin ) ) );
-	max-height: calc( 100vh - var( --cmdk-dialog-margin ) );
+	width: min(
+		var( --cmdk-dialog-width, 640px ),
+		calc( 100vw - var( --cmdk-dialog-margin, 32px ) )
+	);
+	max-height: calc( 100vh - var( --cmdk-dialog-margin, 32px ) );
 	background: var( --cmdk-bg, var( --wpds-color-bg-surface-neutral, #fff ) );
-	border: var( --cmdk-dialog-border-width ) solid
+	border: var( --cmdk-dialog-border-width, 1px ) solid
 		var( --cmdk-border, var( --wpds-color-stroke-surface-neutral-weak, #dcdcde ) );
 	border-radius: var( --cmdk-radius, var( --wpds-radius-medium, 4px ) );
 	box-shadow: var( --cmdk-shadow, 0 16px 40px rgba( 0, 0, 0, 0.12 ) );
 	z-index: var( --cmdk-dialog-z, 1000 );
 	overflow: hidden;
-	font-family: var( --cmdk-font );
+	font-family: var(
+		--cmdk-font,
+		-apple-system,
+		BlinkMacSystemFont,
+		'Segoe UI',
+		'Noto Sans',
+		Helvetica,
+		Arial,
+		sans-serif
+	);
 	color: var( --cmdk-text, var( --wpds-color-fg-content-neutral, #1e1e1e ) );
 }
 
 [cmdk-input-wrapper] {
 	display: flex;
 	align-items: center;
-	min-height: var( --cmdk-input-height );
-	padding-inline: var( --cmdk-input-padding-x );
+	min-height: var( --cmdk-input-height, 52px );
+	padding-inline: var( --cmdk-input-padding-x, 16px );
 	background: var( --cmdk-input-bg, var( --wpds-color-bg-surface-neutral, #fff ) );
-	border-bottom: var( --cmdk-dialog-border-width ) solid
+	border-bottom: var( --cmdk-dialog-border-width, 1px ) solid
 		var( --cmdk-border, var( --wpds-color-stroke-surface-neutral-weak, #dcdcde ) );
 }
 
 [cmdk-input-wrapper]:focus-within {
-	border-bottom-color: var( --cmdk-focus );
-	box-shadow: var( --cmdk-input-focus-shadow );
+	border-bottom-color: var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) );
+	box-shadow: var(
+		--cmdk-input-focus-shadow,
+		inset 0 -1px 0 var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) )
+	);
 }
 
 [cmdk-input-wrapper] svg {
-	width: var( --cmdk-input-icon-size );
-	height: var( --cmdk-input-icon-size );
+	width: var( --cmdk-input-icon-size, 18px );
+	height: var( --cmdk-input-icon-size, 18px );
 	color: var( --cmdk-placeholder, var( --wpds-color-fg-content-neutral-subtle, #757575 ) );
-	margin-right: var( --cmdk-input-icon-gap );
+	margin-right: var( --cmdk-input-icon-gap, 12px );
 	flex-shrink: 0;
 }
 
@@ -94,16 +81,16 @@
 	max-height: var( --cmdk-max-height, 360px );
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	padding: var( --cmdk-list-padding );
-	scroll-padding-block: var( --cmdk-list-padding );
+	padding: var( --cmdk-list-padding, 8px );
+	scroll-padding-block: var( --cmdk-list-padding, 8px );
 }
 
 [cmdk-group-heading] {
 	font-size: var( --cmdk-group-heading-font-size, 12px );
 	line-height: var( --cmdk-group-heading-line-height, 16px );
 	color: var( --cmdk-group-heading, var( --wpds-color-fg-content-neutral-subtle, #646970 ) );
-	padding: var( --cmdk-group-heading-padding-y ) var( --cmdk-group-heading-padding-x )
-		calc( var( --cmdk-group-heading-padding-y ) / 2 );
+	padding: var( --cmdk-group-heading-padding-y, 8px ) var( --cmdk-group-heading-padding-x, 12px )
+		calc( var( --cmdk-group-heading-padding-y, 8px ) / 2 );
 	font-weight: var( --cmdk-group-heading-font-weight, 500 );
 	user-select: none;
 }
@@ -111,17 +98,17 @@
 [cmdk-item] {
 	display: flex;
 	align-items: center;
-	padding: var( --cmdk-item-padding-y ) var( --cmdk-item-padding-x );
-	border-radius: var( --cmdk-item-radius );
+	padding: var( --cmdk-item-padding-y, 10px ) var( --cmdk-item-padding-x, 12px );
+	border-radius: var( --cmdk-item-radius, 4px );
 	cursor: pointer;
 	font-size: var( --cmdk-item-font-size, 14px );
 	line-height: var( --cmdk-item-line-height, 20px );
 	color: var( --cmdk-text, var( --wpds-color-fg-content-neutral, #1e1e1e ) );
-	gap: var( --cmdk-item-gap );
+	gap: var( --cmdk-item-gap, 12px );
 	user-select: none;
 	transition:
-		background-color var( --cmdk-transition-duration ) ease,
-		color var( --cmdk-transition-duration ) ease;
+		background-color var( --cmdk-transition-duration, 100ms ) ease,
+		color var( --cmdk-transition-duration, 100ms ) ease;
 }
 
 [cmdk-item][data-selected='true'] {
@@ -138,10 +125,10 @@
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	width: var( --cmdk-icon-size );
-	min-width: var( --cmdk-icon-size );
-	height: var( --cmdk-icon-size );
-	color: var( --cmdk-icon-color );
+	width: var( --cmdk-icon-size, 20px );
+	min-width: var( --cmdk-icon-size, 20px );
+	height: var( --cmdk-icon-size, 20px );
+	color: var( --cmdk-icon-color, var( --wpds-color-fg-content-neutral-subtle, #646970 ) );
 	flex-shrink: 0;
 }
 
@@ -162,7 +149,7 @@
 [cmdk-item-description] {
 	font-size: var( --cmdk-item-description-font-size, 12px );
 	line-height: var( --cmdk-item-description-line-height, 16px );
-	color: var( --cmdk-description );
+	color: var( --cmdk-description, var( --wpds-color-fg-content-neutral-subtle, #646970 ) );
 	margin-top: var( --cmdk-item-description-gap, 2px );
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -174,15 +161,16 @@
 	flex-shrink: 0;
 	font-size: var( --cmdk-item-meta-font-size, 12px );
 	line-height: var( --cmdk-item-meta-line-height, 16px );
-	color: var( --cmdk-shortcut-text );
+	color: var( --cmdk-shortcut-text, var( --wpds-color-fg-content-neutral-subtle, #646970 ) );
 	font-family: inherit;
 }
 
 [cmdk-item-shortcut] {
 	padding: var( --cmdk-shortcut-padding-y, 2px ) var( --cmdk-shortcut-padding-x, 6px );
-	border: var( --cmdk-shortcut-border-width, 1px ) solid var( --cmdk-shortcut-border );
+	border: var( --cmdk-shortcut-border-width, 1px ) solid
+		var( --cmdk-shortcut-border, var( --wpds-color-stroke-surface-neutral-weak, #dcdcde ) );
 	border-radius: var( --cmdk-shortcut-radius, 4px );
-	background: var( --cmdk-shortcut-bg );
+	background: var( --cmdk-shortcut-bg, var( --wpds-color-bg-surface-neutral-weak, #f6f7f7 ) );
 	font-family: inherit;
 }
 

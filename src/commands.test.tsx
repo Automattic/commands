@@ -440,6 +440,16 @@ describe( 'theme CSS contract', () => {
 		}
 	} );
 
+	it( 'keeps dialog defaults as property-level fallbacks', () => {
+		const dialogBlock = themeCss.match( /\[cmdk-dialog\]\s*{(?<body>[\s\S]*?)\n}/ )?.groups?.body;
+
+		expect( dialogBlock ).toBeDefined();
+		expect( dialogBlock ).not.toMatch( /^\s*--cmdk-[\w-]+\s*:/m );
+		expect( dialogBlock ).toContain(
+			'var( --cmdk-bg, var( --wpds-color-bg-surface-neutral, #fff ) )'
+		);
+	} );
+
 	it( 'targets cmdk attribute selectors for palette parts', () => {
 		const requiredSelectors = [
 			'[cmdk-overlay]',
