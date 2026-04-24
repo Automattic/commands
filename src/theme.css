@@ -181,7 +181,6 @@
 		var( --cmdk-shortcut-border, var( --wpds-color-stroke-surface-neutral-weak, #dcdcde ) );
 	border-radius: var( --cmdk-shortcut-radius, 4px );
 	background: var( --cmdk-shortcut-bg, var( --wpds-color-bg-surface-neutral-weak, #f6f7f7 ) );
-	font-family: inherit;
 }
 
 [cmdk-empty] {
