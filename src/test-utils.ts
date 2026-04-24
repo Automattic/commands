@@ -1,5 +1,12 @@
 import { act } from '@testing-library/react';
 
+import type { Command } from './types';
+
+/** Creates a Command with sensible defaults — only `id` and `title` are required. */
+export function cmd( overrides: Partial< Command > & { id: string; title: string } ): Command {
+	return { route: '/test', ...overrides };
+}
+
 export interface KeyModifiers {
 	meta?: boolean;
 	ctrl?: boolean;
