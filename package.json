@@ -17,7 +17,7 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./style.css": "./dist/index.css"
+    "./style.css": "./dist/theme.css"
   },
   "files": [
     "dist"

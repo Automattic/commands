@@ -2,8 +2,6 @@ import { Commands } from '@automattic/commands';
 
 import type { Command } from '@automattic/commands';
 
-import '@automattic/commands/style.css';
-
 const commands: Command[] = [
 	{
 		id: 'home',
