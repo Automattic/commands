@@ -10,6 +10,16 @@ import { validateCommands } from './validate-commands';
 import type { Command, CommandsProps } from './types';
 import './theme.css';
 
+const themeAttributes = {
+	inputWrapper: { 'cmdk-input-wrapper': '' },
+	itemIcon: { 'cmdk-item-icon': '' },
+	itemContent: { 'cmdk-item-content': '' },
+	itemTitle: { 'cmdk-item-title': '' },
+	itemDescription: { 'cmdk-item-description': '' },
+	itemShortcut: { 'cmdk-item-shortcut': '' },
+	itemType: { 'cmdk-item-type': '' },
+} as const;
+
 function SearchIcon() {
 	return (
 		<svg
@@ -75,7 +85,7 @@ function Commands( {
 				<Dialog.Title>Command palette</Dialog.Title>
 				<Dialog.Description>Search and run commands</Dialog.Description>
 			</VisuallyHidden>
-			<div data-cmdk-input-wrapper="">
+			<div { ...themeAttributes.inputWrapper }>
 				<SearchIcon />
 				<CommandPrimitive.Input placeholder={ placeholder } />
 			</div>
@@ -116,15 +126,17 @@ function CommandItem( { command, onSelect }: CommandItemProps ) {
 
 	return (
 		<CommandPrimitive.Item value={ command.id } keywords={ command.keywords } onSelect={ onSelect }>
-			{ command.icon && <span data-slot="icon">{ command.icon }</span> }
-			<span data-slot="label">
-				<span data-slot="title">{ command.title }</span>
-				{ command.description && <span data-slot="description">{ command.description }</span> }
+			{ command.icon && <span { ...themeAttributes.itemIcon }>{ command.icon }</span> }
+			<span { ...themeAttributes.itemContent }>
+				<span { ...themeAttributes.itemTitle }>{ command.title }</span>
+				{ command.description && (
+					<span { ...themeAttributes.itemDescription }>{ command.description }</span>
+				) }
 			</span>
 			{ command.shortcut ? (
-				<span data-slot="shortcut">{ command.shortcut }</span>
+				<span { ...themeAttributes.itemShortcut }>{ command.shortcut }</span>
 			) : (
-				<span data-slot="type">{ typeLabel }</span>
+				<span { ...themeAttributes.itemType }>{ typeLabel }</span>
 			) }
 		</CommandPrimitive.Item>
 	);

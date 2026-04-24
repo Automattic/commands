@@ -1,4 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 
 import { Commands } from './commands';
@@ -121,6 +122,49 @@ describe( 'Commands', () => {
 			await waitFor( () => {
 				expect( screen.getByTestId( 'test-icon' ) ).toBeInTheDocument();
 			} );
+		} );
+
+		it( 'renders package-owned cmdk attribute hooks for theming', async () => {
+			const commands = [
+				cmd( {
+					id: 'themed',
+					title: 'Themed command',
+					description: 'Uses theme hooks',
+					icon: <span data-testid="theme-icon">T</span>,
+					shortcut: '⌘T',
+				} ),
+			];
+			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Themed command' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			expect( input.closest( '[cmdk-input-wrapper]' ) ).toBeInTheDocument();
+
+			const item = screen.getByText( 'Themed command' ).closest( '[cmdk-item]' ) as HTMLElement;
+			expect( item.querySelector( '[cmdk-item-icon]' ) ).toBeInTheDocument();
+			expect( item.querySelector( '[cmdk-item-content]' ) ).toBeInTheDocument();
+			expect( item.querySelector( '[cmdk-item-title]' ) ).toHaveTextContent( 'Themed command' );
+			expect( item.querySelector( '[cmdk-item-description]' ) ).toHaveTextContent(
+				'Uses theme hooks'
+			);
+			expect( item.querySelector( '[cmdk-item-shortcut]' ) ).toHaveTextContent( '⌘T' );
+		} );
+
+		it( 'renders the type label with a cmdk attribute hook', async () => {
+			const commands = [ cmd( { id: 'route', title: 'Route command', route: '/route' } ) ];
+			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Route command' ) ).toBeInTheDocument();
+			} );
+
+			const item = screen.getByText( 'Route command' ).closest( '[cmdk-item]' ) as HTMLElement;
+			expect( item.querySelector( '[cmdk-item-type]' ) ).toHaveTextContent( 'Link' );
 		} );
 
 		it( 'shows "Link" label for route commands', async () => {
@@ -369,5 +413,58 @@ describe( 'Commands', () => {
 			dispatchKey( 'p', { ctrl: true, shift: true } );
 			expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
 		} );
+	} );
+} );
+
+describe( 'theme CSS contract', () => {
+	const themeCss = readFileSync( 'src/theme.css', 'utf8' );
+
+	it( 'includes the required public custom properties', () => {
+		const requiredVariables = [
+			'--cmdk-bg',
+			'--cmdk-text',
+			'--cmdk-border',
+			'--cmdk-item-selected-bg',
+			'--cmdk-item-selected-text',
+			'--cmdk-input-bg',
+			'--cmdk-input-text',
+			'--cmdk-placeholder',
+			'--cmdk-group-heading',
+			'--cmdk-shadow',
+			'--cmdk-radius',
+			'--cmdk-max-height',
+		];
+
+		for ( const variableName of requiredVariables ) {
+			expect( themeCss ).toContain( variableName );
+		}
+	} );
+
+	it( 'targets cmdk attribute selectors for palette parts', () => {
+		const requiredSelectors = [
+			'[cmdk-overlay]',
+			'[cmdk-dialog]',
+			'[cmdk-input-wrapper]',
+			'[cmdk-input]',
+			'[cmdk-list]',
+			'[cmdk-group-heading]',
+			'[cmdk-item]',
+			'[cmdk-item-icon]',
+			'[cmdk-item-content]',
+			'[cmdk-item-title]',
+			'[cmdk-item-description]',
+			'[cmdk-item-shortcut]',
+			'[cmdk-item-type]',
+			'[cmdk-empty]',
+		];
+
+		for ( const selector of requiredSelectors ) {
+			expect( themeCss ).toContain( selector );
+		}
+	} );
+
+	it( 'does not use old package-owned data selectors', () => {
+		expect( themeCss ).not.toContain( '[data-cmdk-input-wrapper]' );
+		expect( themeCss ).not.toContain( '[data-slot=' );
 	} );
 } );
