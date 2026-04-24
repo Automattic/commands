@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
+import { useRecentCommands } from './hooks/use-recent-commands';
 import { validateCommands } from './validate-commands';
 
 import type { Command, CommandsProps } from './types';
@@ -39,34 +40,57 @@ function Commands( {
 	emptyState,
 	triggerKey = 'Mod+k',
 	onNavigate,
+	showRecent = true,
+	recentLimit,
+	recentStorageKey,
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
+	const [ search, setSearch ] = useState( '' );
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
 
 	useHotkey( triggerKey, () => {
-		setOpen( prev => ! prev );
+		if ( open ) {
+			setSearch( '' );
+			setOpen( false );
+		} else {
+			setOpen( true );
+		}
 	} );
 
+	const handleOpenChange = useCallback( ( nextOpen: boolean ) => {
+		if ( ! nextOpen ) {
+			setSearch( '' );
+		}
+		setOpen( nextOpen );
+	}, [] );
+
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
+	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
+		limit: recentLimit,
+		storageKey: recentStorageKey,
+	} );
+	const shouldShowRecent = showRecent && search.length === 0 && recentCommands.length > 0;
 
 	const handleSelect = useCallback(
 		( item: Command ) => {
+			addRecent( item.id );
 			if ( item.route ) {
 				onNavigate?.( item.route );
 			} else {
 				item.action?.();
 			}
+			setSearch( '' );
 			setOpen( false );
 		},
-		[ onNavigate ]
+		[ addRecent, onNavigate ]
 	);
 
 	return (
 		<CommandPrimitive.Dialog
 			open={ open }
-			onOpenChange={ setOpen }
+			onOpenChange={ handleOpenChange }
 			label="Command palette"
 			filter={ filter }
 			loop
@@ -77,10 +101,26 @@ function Commands( {
 			</VisuallyHidden>
 			<div data-cmdk-input-wrapper="">
 				<SearchIcon />
-				<CommandPrimitive.Input placeholder={ placeholder } />
+				<CommandPrimitive.Input
+					placeholder={ placeholder }
+					value={ search }
+					onValueChange={ setSearch }
+				/>
 			</div>
 			<CommandPrimitive.List>
 				<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
+				{ shouldShowRecent && (
+					<CommandPrimitive.Group heading="Recently Used">
+						{ recentCommands.map( item => (
+							<CommandItem
+								key={ item.id }
+								command={ item }
+								value={ `recent:${ item.id }` }
+								onSelect={ () => handleSelect( item ) }
+							/>
+						) ) }
+					</CommandPrimitive.Group>
+				) }
 				{ Array.from( grouped.entries() ).map( ( [ group, items ] ) =>
 					group ? (
 						<CommandPrimitive.Group key={ group } heading={ group }>
@@ -109,13 +149,15 @@ function Commands( {
 
 interface CommandItemProps {
 	command: Command;
+	value?: string;
 	onSelect: () => void;
 }
-function CommandItem( { command, onSelect }: CommandItemProps ) {
+
+function CommandItem( { command, value = command.id, onSelect }: CommandItemProps ) {
 	const typeLabel = command.route ? 'Link' : 'Action';
 
 	return (
-		<CommandPrimitive.Item value={ command.id } keywords={ command.keywords } onSelect={ onSelect }>
+		<CommandPrimitive.Item value={ value } keywords={ command.keywords } onSelect={ onSelect }>
 			{ command.icon && <span data-slot="icon">{ command.icon }</span> }
 			<span data-slot="label">
 				<span data-slot="title">{ command.title }</span>

@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 import { Commands } from './commands';
 import { cmd, dispatchKey } from './test-utils';
@@ -13,10 +13,28 @@ function openPalette() {
 	dispatchKey( 'k', { meta: true } );
 }
 
+/** Open the palette and wait for the dialog to be visible. */
+async function openPaletteAndWait() {
+	openPalette();
+
+	await waitFor( () => {
+		expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
+	} );
+}
+
 /** Type into the search input once the dialog is visible. */
 function typeSearch( value: string ) {
 	const input = screen.getByPlaceholderText( 'Search commands...' );
 	fireEvent.change( input, { target: { value } } );
+}
+
+/** Select a visible command by title and wait for the dialog to close. */
+async function selectCommand( title: string ) {
+	fireEvent.click( screen.getByText( title ) );
+
+	await waitFor( () => {
+		expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+	} );
 }
 
 /* ---------- fixtures ---------- */
@@ -43,6 +61,10 @@ const mixedCommands: Command[] = [
 /* ---------- tests ---------- */
 
 describe( 'Commands', () => {
+	beforeEach( () => {
+		window.localStorage.clear();
+	} );
+
 	/* --- open / close --- */
 
 	describe( 'open / close', () => {
@@ -191,6 +213,79 @@ describe( 'Commands', () => {
 
 			const secondGroup = screen.getByText( 'Second' ).closest( '[cmdk-group]' ) as HTMLElement;
 			expect( within( secondGroup ).getByText( 'Beta' ) ).toBeInTheDocument();
+		} );
+	} );
+
+	/* --- recent commands --- */
+
+	describe( 'recent commands', () => {
+		it( 'renders recently used commands above other groups when search is empty', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+
+			const recentGroup = screen.getByText( 'Recently Used' ).closest( '[cmdk-group]' );
+			expect( recentGroup ).toBeInTheDocument();
+			expect( within( recentGroup as HTMLElement ).getByText( 'Settings' ) ).toBeInTheDocument();
+
+			const list = screen.getByRole( 'dialog' ).querySelector( '[cmdk-list]' ) as HTMLElement;
+			const pagesGroup = screen.getByText( 'Pages' ).closest( '[cmdk-group]' ) as HTMLElement;
+			const groups = Array.from( list.querySelectorAll( '[cmdk-group]' ) );
+
+			expect( groups[ 0 ] ).toBe( recentGroup );
+			expect( groups[ 1 ] ).toBe( pagesGroup );
+		} );
+
+		it( 'hides the recently used group when the user types', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+			expect( screen.getByText( 'Recently Used' ) ).toBeInTheDocument();
+
+			typeSearch( 'dash' );
+
+			await waitFor( () => {
+				expect( screen.queryByText( 'Recently Used' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
+		it( 'does not render recently used commands when showRecent is false', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" showRecent={ false } /> );
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+
+			expect( screen.queryByText( 'Recently Used' ) ).not.toBeInTheDocument();
+		} );
+
+		it( 'limits recently used commands with recentLimit', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" recentLimit={ 2 } /> );
+
+			await openPaletteAndWait();
+			await selectCommand( 'Dashboard' );
+
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+			await selectCommand( 'Toggle Dark Mode' );
+
+			await openPaletteAndWait();
+
+			const recentGroup = screen.getByText( 'Recently Used' ).closest( '[cmdk-group]' );
+			expect( recentGroup ).toBeInTheDocument();
+			expect(
+				within( recentGroup as HTMLElement ).getByText( 'Toggle Dark Mode' )
+			).toBeInTheDocument();
+			expect( within( recentGroup as HTMLElement ).getByText( 'Settings' ) ).toBeInTheDocument();
+			expect(
+				within( recentGroup as HTMLElement ).queryByText( 'Dashboard' )
+			).not.toBeInTheDocument();
 		} );
 	} );
 
