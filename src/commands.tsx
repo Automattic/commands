@@ -126,7 +126,11 @@ function CommandItem( { command, onSelect }: CommandItemProps ) {
 
 	return (
 		<CommandPrimitive.Item value={ command.id } keywords={ command.keywords } onSelect={ onSelect }>
-			{ command.icon && <span { ...themeAttributes.itemIcon }>{ command.icon }</span> }
+			{ command.icon && (
+				<span { ...themeAttributes.itemIcon } aria-hidden="true">
+					{ command.icon }
+				</span>
+			) }
 			<span { ...themeAttributes.itemContent }>
 				<span { ...themeAttributes.itemTitle }>{ command.title }</span>
 				{ command.description && (

@@ -108,11 +108,14 @@
 	user-select: none;
 	transition:
 		background-color var( --cmdk-transition-duration, 100ms ) ease,
-		color var( --cmdk-transition-duration, 100ms ) ease;
+		color var( --cmdk-transition-duration, 100ms ) ease,
+		box-shadow var( --cmdk-transition-duration, 100ms ) ease;
 }
 
 [cmdk-item][data-selected='true'] {
 	background: var( --cmdk-item-selected-bg, var( --wpds-color-bg-surface-neutral-weak, #f6f7f7 ) );
+	box-shadow: inset var( --cmdk-item-selected-indicator-width, 3px ) 0 0
+		var( --cmdk-item-selected-indicator, var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) ) );
 	color: var( --cmdk-item-selected-text, var( --wpds-color-fg-content-neutral, #1e1e1e ) );
 }
 
@@ -161,11 +164,18 @@
 	flex-shrink: 0;
 	font-size: var( --cmdk-item-meta-font-size, 12px );
 	line-height: var( --cmdk-item-meta-line-height, 16px );
-	color: var( --cmdk-shortcut-text, var( --wpds-color-fg-content-neutral-subtle, #646970 ) );
 	font-family: inherit;
 }
 
+[cmdk-item-type] {
+	color: var( --cmdk-type-label, var( --wpds-color-fg-content-neutral-subtle, #646970 ) );
+}
+
 [cmdk-item-shortcut] {
+	color: var(
+		--cmdk-shortcut-text,
+		var( --cmdk-shortcut, var( --wpds-color-fg-content-neutral-subtle, #646970 ) )
+	);
 	padding: var( --cmdk-shortcut-padding-y, 2px ) var( --cmdk-shortcut-padding-x, 6px );
 	border: var( --cmdk-shortcut-border-width, 1px ) solid
 		var( --cmdk-shortcut-border, var( --wpds-color-stroke-surface-neutral-weak, #dcdcde ) );

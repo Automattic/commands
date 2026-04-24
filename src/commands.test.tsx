@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 import { Commands } from './commands';
@@ -145,7 +146,7 @@ describe( 'Commands', () => {
 			expect( input.closest( '[cmdk-input-wrapper]' ) ).toBeInTheDocument();
 
 			const item = screen.getByText( 'Themed command' ).closest( '[cmdk-item]' ) as HTMLElement;
-			expect( item.querySelector( '[cmdk-item-icon]' ) ).toBeInTheDocument();
+			expect( item.querySelector( '[cmdk-item-icon]' ) ).toHaveAttribute( 'aria-hidden', 'true' );
 			expect( item.querySelector( '[cmdk-item-content]' ) ).toBeInTheDocument();
 			expect( item.querySelector( '[cmdk-item-title]' ) ).toHaveTextContent( 'Themed command' );
 			expect( item.querySelector( '[cmdk-item-description]' ) ).toHaveTextContent(
@@ -417,7 +418,7 @@ describe( 'Commands', () => {
 } );
 
 describe( 'theme CSS contract', () => {
-	const themeCss = readFileSync( 'src/theme.css', 'utf8' );
+	const themeCss = readFileSync( resolve( 'src/theme.css' ), 'utf8' );
 
 	it( 'includes the required public custom properties', () => {
 		const requiredVariables = [
@@ -433,6 +434,8 @@ describe( 'theme CSS contract', () => {
 			'--cmdk-shadow',
 			'--cmdk-radius',
 			'--cmdk-max-height',
+			'--cmdk-type-label',
+			'--cmdk-item-selected-indicator',
 		];
 
 		for ( const variableName of requiredVariables ) {
@@ -441,13 +444,21 @@ describe( 'theme CSS contract', () => {
 	} );
 
 	it( 'keeps dialog defaults as property-level fallbacks', () => {
-		const dialogBlock = themeCss.match( /\[cmdk-dialog\]\s*{(?<body>[\s\S]*?)\n}/ )?.groups?.body;
+		const dialogBlock = themeCss.match( /\[cmdk-dialog\]\s*{(?<body>[\s\S]*?)\s*}/ )?.groups?.body;
 
 		expect( dialogBlock ).toBeDefined();
 		expect( dialogBlock ).not.toMatch( /^\s*--cmdk-[\w-]+\s*:/m );
 		expect( dialogBlock ).toContain(
 			'var( --cmdk-bg, var( --wpds-color-bg-surface-neutral, #fff ) )'
 		);
+	} );
+
+	it( 'lets type labels and shortcut labels be themed independently', () => {
+		expect( themeCss ).toContain( '[cmdk-item-type]' );
+		expect( themeCss ).toContain(
+			'color: var( --cmdk-type-label, var( --wpds-color-fg-content-neutral-subtle, #646970 ) )'
+		);
+		expect( themeCss ).toContain( '--cmdk-shortcut-text' );
 	} );
 
 	it( 'targets cmdk attribute selectors for palette parts', () => {
