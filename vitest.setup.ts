@@ -6,3 +6,6 @@ global.ResizeObserver = class ResizeObserver {
 	public unobserve() {}
 	public disconnect() {}
 };
+
+// jsdom does not implement scrollIntoView; cmdk calls it on the active item.
+Element.prototype.scrollIntoView = function () {};

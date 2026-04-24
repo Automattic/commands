@@ -1,0 +1,127 @@
+[cmdk-overlay] {
+	position: fixed;
+	inset: 0;
+	background: rgba( 0, 0, 0, 0.5 );
+	z-index: var( --cmdk-overlay-z, 999 );
+}
+
+[cmdk-dialog] {
+	position: fixed;
+	top: 20%;
+	left: 50%;
+	transform: translateX( -50% );
+	width: calc( 100% - 32px );
+	max-width: 640px;
+	background: var( --cmdk-bg, #fff );
+	border-radius: var( --cmdk-radius, 12px );
+	box-shadow: var( --cmdk-shadow, 0 16px 70px rgba( 0, 0, 0, 0.15 ) );
+	z-index: var( --cmdk-dialog-z, 1000 );
+	overflow: hidden;
+	font-family: var( --cmdk-font, system-ui, -apple-system, sans-serif );
+	color: var( --cmdk-text, #333 );
+}
+
+[data-cmdk-input-wrapper] {
+	display: flex;
+	align-items: center;
+	padding: 12px 16px;
+	border-bottom: 1px solid var( --cmdk-border, #e5e5e5 );
+}
+
+[data-cmdk-input-wrapper] svg {
+	width: 18px;
+	height: 18px;
+	color: var( --cmdk-placeholder, #999 );
+	margin-right: 10px;
+	flex-shrink: 0;
+}
+
+[cmdk-input] {
+	width: 100%;
+	border: none;
+	outline: none;
+	font-size: 16px;
+	background: var( --cmdk-input-bg, transparent );
+	color: var( --cmdk-input-text, inherit );
+	font-family: inherit;
+}
+
+[cmdk-input]::placeholder {
+	color: var( --cmdk-placeholder, #999 );
+}
+
+[cmdk-list] {
+	max-height: var( --cmdk-max-height, 300px );
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+[cmdk-group-heading] {
+	font-size: 12px;
+	color: var( --cmdk-group-heading, #999 );
+	padding: 12px 16px 4px;
+	font-weight: 500;
+	user-select: none;
+}
+
+[cmdk-item] {
+	display: flex;
+	align-items: center;
+	padding: 10px 16px;
+	cursor: pointer;
+	font-size: 14px;
+	color: var( --cmdk-text, #333 );
+	gap: 12px;
+	user-select: none;
+	transition: background 0.1s;
+}
+
+[cmdk-item][data-selected='true'] {
+	background: var( --cmdk-item-selected-bg, #f5f5f5 );
+}
+
+[cmdk-item] [data-slot='icon'] {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	color: var( --cmdk-icon, #666 );
+	flex-shrink: 0;
+}
+
+[cmdk-item] [data-slot='label'] {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+[cmdk-item] [data-slot='title'] {
+	font-weight: 500;
+}
+
+[cmdk-item] [data-slot='description'] {
+	font-size: 12px;
+	color: var( --cmdk-description, #999 );
+	margin-top: 2px;
+}
+
+[cmdk-item] [data-slot='type'] {
+	font-size: 12px;
+	color: var( --cmdk-type-label, #999 );
+	flex-shrink: 0;
+}
+
+[cmdk-item] [data-slot='shortcut'] {
+	font-size: 12px;
+	color: var( --cmdk-shortcut, #999 );
+	flex-shrink: 0;
+	font-family: inherit;
+}
+
+[cmdk-empty] {
+	padding: 24px 16px;
+	text-align: center;
+	color: var( --cmdk-placeholder, #999 );
+	font-size: 14px;
+}
