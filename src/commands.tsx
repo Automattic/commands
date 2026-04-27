@@ -61,6 +61,11 @@ function Commands( {
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
 	const searchRef = useRef( '' );
 	const resolveGenRef = useRef( 0 );
+	const paramSelectionRef = useRef< ParamSelectionState | null >( null );
+
+	useEffect( () => {
+		paramSelectionRef.current = paramSelection;
+	}, [ paramSelection ] );
 
 	useEffect( () => {
 		validateCommands( commands );
@@ -140,12 +145,13 @@ function Commands( {
 
 	const handleParamOptionSelect = useCallback(
 		( value: string ) => {
-			if ( ! paramSelection ) {
+			const selection = paramSelectionRef.current;
+			if ( ! selection ) {
 				return;
 			}
-			const current = paramSelection.pending[ 0 ];
-			const updatedPath = paramSelection.path.replace( `:${ current.name }`, value );
-			const remaining = paramSelection.pending.slice( 1 );
+			const current = selection.pending[ 0 ];
+			const updatedPath = selection.path.replace( `:${ current.name }`, value );
+			const remaining = selection.pending.slice( 1 );
 
 			if ( remaining.length === 0 ) {
 				completeNavigation( updatedPath );
@@ -153,7 +159,7 @@ function Commands( {
 				setParamSelection( { path: updatedPath, pending: remaining } );
 			}
 		},
-		[ completeNavigation, paramSelection ]
+		[ completeNavigation ]
 	);
 
 	const handleParamKeyDown = useCallback(
