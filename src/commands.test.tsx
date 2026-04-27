@@ -452,9 +452,7 @@ describe( 'Commands', () => {
 		it( 'navigates to a resolved route when all params are resolved', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => ( { appId: '42' } );
-			const commands = [
-				cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ),
-			];
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
 			render(
 				<Commands
@@ -481,9 +479,7 @@ describe( 'Commands', () => {
 		it( 'keeps the palette open when params are unresolved', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => ( {} );
-			const commands = [
-				cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ),
-			];
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
 			render(
 				<Commands
@@ -511,17 +507,9 @@ describe( 'Commands', () => {
 
 		it( 'navigates to param-free routes without a resolver', async () => {
 			const onNavigate = vi.fn();
-			const commands = [
-				cmd( { id: 'home', title: 'Home', route: '/home' } ),
-			];
+			const commands = [ cmd( { id: 'home', title: 'Home', route: '/home' } ) ];
 
-			render(
-				<Commands
-					commands={ commands }
-					triggerKey="Meta+k"
-					onNavigate={ onNavigate }
-				/>
-			);
+			render( <Commands commands={ commands } triggerKey="Meta+k" onNavigate={ onNavigate } /> );
 			openPalette();
 
 			await waitFor( () => {
@@ -538,10 +526,8 @@ describe( 'Commands', () => {
 
 		it( 'works with an async resolver', async () => {
 			const onNavigate = vi.fn();
-			const resolver = async () => ( { id: '7' } );
-			const commands = [
-				cmd( { id: 'detail', title: 'Detail', route: '/items/:id' } ),
-			];
+			const resolver = () => Promise.resolve( { id: '7' } );
+			const commands = [ cmd( { id: 'detail', title: 'Detail', route: '/items/:id' } ) ];
 
 			render(
 				<Commands

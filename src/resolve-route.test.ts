@@ -14,17 +14,11 @@ describe( 'extractParams', () => {
 	} );
 
 	it( 'extracts multiple params', () => {
-		expect( extractParams( '/apps/:appId/:env/logs' ) ).toEqual( [
-			'appId',
-			'env',
-		] );
+		expect( extractParams( '/apps/:appId/:env/logs' ) ).toEqual( [ 'appId', 'env' ] );
 	} );
 
 	it( 'handles params with underscores', () => {
-		expect( extractParams( '/users/:user_id/posts/:post_id' ) ).toEqual( [
-			'user_id',
-			'post_id',
-		] );
+		expect( extractParams( '/users/:user_id/posts/:post_id' ) ).toEqual( [ 'user_id', 'post_id' ] );
 	} );
 
 	it( 'returns an empty array for an empty string', () => {
@@ -53,10 +47,7 @@ describe( 'resolveRoute', () => {
 	it( 'resolves multiple params via a sync resolver', async () => {
 		const resolver = () => ( { appId: '42', env: 'production' } );
 
-		const result = await resolveRoute(
-			'/apps/:appId/:env/logs',
-			resolver
-		);
+		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/42/production/logs',
 			unresolved: [],
@@ -64,9 +55,7 @@ describe( 'resolveRoute', () => {
 	} );
 
 	it( 'resolves params via an async resolver', async () => {
-		const resolver = async () => {
-			return { appId: '99' };
-		};
+		const resolver = () => Promise.resolve( { appId: '99' } );
 
 		const result = await resolveRoute( '/apps/:appId', resolver );
 		expect( result ).toEqual( { path: '/apps/99', unresolved: [] } );
@@ -75,10 +64,7 @@ describe( 'resolveRoute', () => {
 	it( 'reports unresolved params when resolver returns partial values', async () => {
 		const resolver = () => ( { appId: '42' } );
 
-		const result = await resolveRoute(
-			'/apps/:appId/:env/logs',
-			resolver
-		);
+		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/42/:env/logs',
 			unresolved: [ 'env' ],

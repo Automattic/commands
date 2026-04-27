@@ -57,7 +57,7 @@ const commands: Command[] = [
  * Sample resolver that simulates deriving route params from the current page.
  * In a real app this would read the URL, app state, or call an API.
  */
-const resolver: CommandsProps[ 'resolver' ] = async ( params ) => {
+const resolver: CommandsProps[ 'resolver' ] = params => {
 	console.log( 'Resolver called with', params );
 
 	const resolved = { ...params };
@@ -81,14 +81,14 @@ export function App() {
 				Press <kbd>Mod+k</kbd> to open the command palette.
 			</p>
 			<p style={ { fontSize: 14, color: '#666' } }>
-				Try &ldquo;Application logs&rdquo; or &ldquo;Audit log&rdquo; to see
-				route param resolution in action. Check the console for details.
+				Try &ldquo;Application logs&rdquo; or &ldquo;Audit log&rdquo; to see route param resolution
+				in action. Check the console for details.
 			</p>
 			<Commands
 				commands={ commands }
 				triggerKey="Mod+k"
 				resolver={ resolver }
-				onNavigate={ ( path ) => console.log( 'Navigating to', path ) }
+				onNavigate={ path => console.log( 'Navigating to', path ) }
 			/>
 		</div>
 	);
