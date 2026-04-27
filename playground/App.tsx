@@ -15,7 +15,7 @@ const commands: Command[] = [
 		id: 'home',
 		title: 'Home',
 		route: '/home',
-		group: 'Pages',
+		group: 'Home',
 		icon: '\u2302',
 		keywords: [ 'dashboard', 'overview' ],
 	},
@@ -23,9 +23,18 @@ const commands: Command[] = [
 		id: 'settings',
 		title: 'Settings',
 		route: '/settings',
-		group: 'Pages',
+		group: 'Home',
 		icon: '\u2699',
 		keywords: [ 'preferences', 'config' ],
+	},
+	{
+		id: 'projects',
+		title: 'Projects',
+		action: () => {
+			/* handled via onAction state in App */
+		},
+		group: 'Home',
+		icon: '\u2630',
 	},
 	{
 		id: 'app-logs',
@@ -46,13 +55,19 @@ const commands: Command[] = [
 		keywords: [ 'audit', 'security' ],
 	},
 	{
-		id: 'projects',
-		title: 'Projects',
-		action: () => {
-			/* handled via onAction state in App */
-		},
-		group: 'Actions',
-		icon: '\u2630',
+		id: 'developer-settings',
+		title: 'Developer settings',
+		route: '/developer-settings',
+		group: 'Other',
+		icon: '</>',
+		keywords: [ 'api', 'tokens' ],
+	},
+	{
+		id: 'privacy-policy',
+		title: 'Privacy policy',
+		route: '/privacy-policy',
+		group: 'Other',
+		icon: '\u2295',
 	},
 	{
 		id: 'logout',
@@ -60,7 +75,7 @@ const commands: Command[] = [
 		action: () => {
 			/* handled via onAction state in App */
 		},
-		group: 'Actions',
+		group: 'Other',
 		icon: '\u21A6',
 	},
 ];
