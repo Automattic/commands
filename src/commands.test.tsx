@@ -476,35 +476,6 @@ describe( 'Commands', () => {
 			} );
 		} );
 
-		it( 'keeps the palette open when params are unresolved', async () => {
-			const onNavigate = vi.fn();
-			const resolver = () => ( {} );
-			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
-
-			render(
-				<Commands
-					commands={ commands }
-					triggerKey="Meta+k"
-					resolver={ resolver }
-					onNavigate={ onNavigate }
-				/>
-			);
-			openPalette();
-
-			await waitFor( () => {
-				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
-			} );
-
-			const input = screen.getByPlaceholderText( 'Search commands...' );
-			fireEvent.keyDown( input, { key: 'Enter' } );
-
-			// Palette stays open and onNavigate is not called
-			await waitFor( () => {
-				expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
-			} );
-			expect( onNavigate ).not.toHaveBeenCalled();
-		} );
-
 		it( 'navigates to param-free routes without a resolver', async () => {
 			const onNavigate = vi.fn();
 			const commands = [ cmd( { id: 'home', title: 'Home', route: '/home' } ) ];
@@ -549,6 +520,164 @@ describe( 'Commands', () => {
 			await waitFor( () => {
 				expect( onNavigate ).toHaveBeenCalledWith( '/items/7' );
 			} );
+		} );
+	} );
+
+	/* --- param selection sub-layer --- */
+
+	describe( 'param selection sub-layer', () => {
+		it( 'shows options when resolver returns an array for a param', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {
+				appId: '42',
+				env: [ 'production', 'staging' ],
+			} );
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+			} );
+
+			// Select the command
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Sub-layer appears with options
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'staging' ) ).toBeInTheDocument();
+			} );
+			expect( onNavigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'navigates after selecting an option', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {
+				appId: '42',
+				env: [ 'production', 'staging' ],
+			} );
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+			} );
+
+			// Select the command
+			let input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Wait for sub-layer
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			// Select the option
+			input = screen.getByPlaceholderText( 'Select env...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/42/production/audit' );
+			} );
+		} );
+
+		it( 'steps through multiple unresolved params sequentially', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {
+				appId: [ 'app-one', 'app-two' ],
+				env: [ 'prod', 'dev' ],
+			} );
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+			} );
+
+			// Select the command
+			let input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// First param: appId options
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'app-two' ) ).toBeInTheDocument();
+			} );
+
+			// Select first option (app-one is selected by default)
+			input = screen.getByPlaceholderText( 'Select appId...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Second param: env options
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'dev' ) ).toBeInTheDocument();
+			} );
+
+			// Select first option (prod is selected by default)
+			input = screen.getByPlaceholderText( 'Select env...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/app-one/prod/audit' );
+			} );
+		} );
+
+		it( 'shows the sub-layer when params are unresolved without options', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Palette stays open with the sub-layer (no options to show)
+			await waitFor( () => {
+				expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
+			} );
+			expect( onNavigate ).not.toHaveBeenCalled();
 		} );
 	} );
 

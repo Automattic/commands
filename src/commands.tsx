@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { Root as VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Command as CommandPrimitive } from 'cmdk';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
@@ -9,6 +9,7 @@ import { useRecentCommands } from './hooks/use-recent-commands';
 import { resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
+import type { UnresolvedParam } from './resolve-route';
 import type { Command, CommandsProps } from './types';
 import './theme.css';
 
@@ -32,6 +33,15 @@ function SearchIcon() {
 	);
 }
 
+/* ---------- param-selection sub-layer state ---------- */
+
+interface ParamSelectionState {
+	/** The partially-resolved route path */
+	path: string;
+	/** Queue of params that still need a user selection */
+	pending: UnresolvedParam[];
+}
+
 /* ---------- Commands component ---------- */
 
 function Commands( {
@@ -47,6 +57,9 @@ function Commands( {
 	recentStorageKey,
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
+	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
+	const searchRef = useRef( '' );
+
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
@@ -60,6 +73,29 @@ function Commands( {
 	} );
 	const shouldShowRecent = showRecent && recentCommands.length > 0;
 
+	const resetParamSelection = useCallback( () => {
+		setParamSelection( null );
+	}, [] );
+
+	const handleOpenChange = useCallback(
+		( next: boolean ) => {
+			setOpen( next );
+			if ( ! next ) {
+				resetParamSelection();
+			}
+		},
+		[ resetParamSelection ]
+	);
+
+	const completeNavigation = useCallback(
+		( path: string ) => {
+			onNavigate?.( path );
+			setOpen( false );
+			resetParamSelection();
+		},
+		[ onNavigate, resetParamSelection ]
+	);
+
 	const handleSelect = useCallback(
 		( item: Command ) => {
 			if ( showRecent ) {
@@ -69,8 +105,12 @@ function Commands( {
 			if ( item.route ) {
 				void resolveRoute( item.route, resolver ).then( result => {
 					if ( result.unresolved.length === 0 ) {
-						onNavigate?.( result.path );
-						setOpen( false );
+						completeNavigation( result.path );
+					} else {
+						setParamSelection( {
+							path: result.path,
+							pending: result.unresolved,
+						} );
 					}
 				} );
 			} else {
@@ -78,15 +118,45 @@ function Commands( {
 				setOpen( false );
 			}
 		},
-		[ addRecent, onNavigate, resolver, showRecent ]
+		[ addRecent, completeNavigation, resolver, showRecent ]
 	);
+
+	const handleParamOptionSelect = useCallback(
+		( value: string ) => {
+			if ( ! paramSelection ) {
+				return;
+			}
+			const current = paramSelection.pending[ 0 ];
+			const updatedPath = paramSelection.path.replace( `:${ current.name }`, value );
+			const remaining = paramSelection.pending.slice( 1 );
+
+			if ( remaining.length === 0 ) {
+				completeNavigation( updatedPath );
+			} else {
+				setParamSelection( { path: updatedPath, pending: remaining } );
+			}
+		},
+		[ completeNavigation, paramSelection ]
+	);
+
+	const handleParamKeyDown = useCallback(
+		( event: React.KeyboardEvent ) => {
+			if ( event.key === 'Backspace' && searchRef.current === '' ) {
+				resetParamSelection();
+			}
+		},
+		[ resetParamSelection ]
+	);
+
+	const currentParam = paramSelection?.pending[ 0 ] ?? null;
 
 	return (
 		<CommandPrimitive.Dialog
+			key={ currentParam?.name ?? 'commands' }
 			open={ open }
-			onOpenChange={ setOpen }
+			onOpenChange={ handleOpenChange }
 			label="Command palette"
-			filter={ filter }
+			filter={ paramSelection ? undefined : filter }
 			loop
 		>
 			<VisuallyHidden>
@@ -95,42 +165,76 @@ function Commands( {
 			</VisuallyHidden>
 			<div data-cmdk-input-wrapper="">
 				<SearchIcon />
-				<CommandPrimitive.Input placeholder={ placeholder } />
+				<CommandPrimitive.Input
+					placeholder={ currentParam ? `Select ${ currentParam.name }...` : placeholder }
+					onValueChange={ val => {
+						searchRef.current = val;
+					} }
+					onKeyDown={ paramSelection ? handleParamKeyDown : undefined }
+				/>
 			</div>
 			<CommandPrimitive.List>
-				<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
-				{ shouldShowRecent && (
-					<CommandPrimitive.Group heading="Recently Used">
-						{ recentCommands.map( item => (
-							<CommandItem
-								key={ item.id }
-								command={ item }
-								value={ `recent:${ item.id }` }
-								onSelect={ () => handleSelect( item ) }
-							/>
-						) ) }
-					</CommandPrimitive.Group>
-				) }
-				{ Array.from( grouped.entries() ).map( ( [ group, items ] ) =>
-					group ? (
-						<CommandPrimitive.Group key={ group } heading={ group }>
-							{ items.map( item => (
-								<CommandItem
-									key={ item.id }
-									command={ item }
-									onSelect={ () => handleSelect( item ) }
-								/>
-							) ) }
-						</CommandPrimitive.Group>
-					) : (
-						items.map( item => (
-							<CommandItem
-								key={ item.id }
-								command={ item }
-								onSelect={ () => handleSelect( item ) }
-							/>
-						) )
-					)
+				{ paramSelection ? (
+					<>
+						<CommandPrimitive.Empty>No matching options.</CommandPrimitive.Empty>
+						{ currentParam?.options ? (
+							<CommandPrimitive.Group heading={ `Choose ${ currentParam.name }` }>
+								{ currentParam.options.map( option => (
+									<CommandPrimitive.Item
+										key={ option }
+										value={ option }
+										onSelect={ () => handleParamOptionSelect( option ) }
+									>
+										<span data-slot="label">
+											<span data-slot="title">{ option }</span>
+										</span>
+									</CommandPrimitive.Item>
+								) ) }
+							</CommandPrimitive.Group>
+						) : (
+							<CommandPrimitive.Empty>
+								No options available for { currentParam?.name }.
+							</CommandPrimitive.Empty>
+						) }
+					</>
+				) : (
+					<>
+						<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
+						{ shouldShowRecent && (
+							<CommandPrimitive.Group heading="Recently Used">
+								{ recentCommands.map( item => (
+									<CommandItem
+										key={ item.id }
+										command={ item }
+										value={ `recent:${ item.id }` }
+										onSelect={ () => handleSelect( item ) }
+									/>
+								) ) }
+							</CommandPrimitive.Group>
+						) }
+						{ Array.from( grouped.entries() ).map( ( [ group, items ] ) =>
+							group ? (
+								<CommandPrimitive.Group key={ group } heading={ group }>
+									{ items.map( item => (
+										<CommandItem
+											key={ item.id }
+											command={ item }
+											onSelect={ () => handleSelect( item ) }
+										/>
+									) ) }
+								</CommandPrimitive.Group>
+							) : (
+								items.map( item => (
+									<CommandItem
+										key={ item.id }
+										command={ item }
+										onSelect={ () => handleSelect( item ) }
+									/>
+								) )
+							)
+						) }
+					</>
+
 				) }
 			</CommandPrimitive.List>
 		</CommandPrimitive.Dialog>

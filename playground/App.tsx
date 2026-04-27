@@ -1,6 +1,14 @@
+import { useState } from 'react';
+
 import { Commands } from '@automattic/commands';
 
 import type { Command, CommandsProps } from '@automattic/commands';
+
+interface Activity {
+	type: 'navigation' | 'action';
+	label: string;
+	timestamp: string;
+}
 
 const commands: Command[] = [
 	{
@@ -31,7 +39,7 @@ const commands: Command[] = [
 	{
 		id: 'audit-log',
 		title: 'Audit log',
-		description: 'Resolver fills :appId and :env from context',
+		description: 'Asks you to pick an environment',
 		route: '/apps/:appId/:env/audit-log',
 		group: 'Pages',
 		icon: '\ud83d\udee1',
@@ -40,40 +48,51 @@ const commands: Command[] = [
 	{
 		id: 'projects',
 		title: 'Projects',
-		action: () => console.log( 'Projects' ),
+		action: () => {
+			/* handled via onAction state in App */
+		},
 		group: 'Actions',
 		icon: '\u2630',
 	},
 	{
 		id: 'logout',
 		title: 'Log out',
-		action: () => console.log( 'Log out' ),
+		action: () => {
+			/* handled via onAction state in App */
+		},
 		group: 'Actions',
 		icon: '\u21A6',
 	},
 ];
 
 /**
- * Sample resolver that simulates deriving route params from the current page.
- * In a real app this would read the URL, app state, or call an API.
+ * Sample resolver that derives what it can from context and returns
+ * options arrays for params that require user selection.
  */
 const resolver: CommandsProps[ 'resolver' ] = params => {
-	console.log( 'Resolver called with', params );
-
-	const resolved = { ...params };
+	const resolved: Record< string, string | string[] > = { ...params };
 
 	if ( 'appId' in resolved ) {
 		resolved.appId = 'my-cool-app';
 	}
 
 	if ( 'env' in resolved ) {
-		resolved.env = 'production';
+		resolved.env = [ 'production', 'staging', 'development' ];
 	}
 
 	return resolved;
 };
 
 export function App() {
+	const [ activities, setActivities ] = useState< Activity[] >( [] );
+
+	const addActivity = ( type: Activity[ 'type' ], label: string ) => {
+		setActivities( prev => [
+			{ type, label, timestamp: new Date().toLocaleTimeString() },
+			...prev,
+		] );
+	};
+
 	return (
 		<div style={ { padding: 24, fontFamily: 'system-ui, sans-serif' } }>
 			<h1>@automattic/commands playground</h1>
@@ -81,15 +100,37 @@ export function App() {
 				Press <kbd>Mod+k</kbd> to open the command palette.
 			</p>
 			<p style={ { fontSize: 14, color: '#666' } }>
-				Try &ldquo;Application logs&rdquo; or &ldquo;Audit log&rdquo; to see route param resolution
-				in action. Check the console for details.
+				Try &ldquo;Audit log&rdquo; to see the param-selection sub-layer (pick an environment).
 			</p>
 			<Commands
 				commands={ commands }
 				triggerKey="Mod+k"
 				resolver={ resolver }
-				onNavigate={ path => console.log( 'Navigating to', path ) }
+				onNavigate={ path => addActivity( 'navigation', path ) }
 			/>
+			{ activities.length > 0 && (
+				<div style={ { marginTop: 24 } }>
+					<h2>Activity log</h2>
+					<ul style={ { listStyle: 'none', padding: 0, margin: 0 } }>
+						{ activities.map( ( activity, idx ) => (
+							<li
+								key={ idx }
+								style={ {
+									padding: '6px 0',
+									borderBottom: '1px solid #eee',
+									fontFamily: 'monospace',
+									fontSize: 14,
+								} }
+							>
+								<span style={ { color: '#888' } }>{ activity.timestamp }</span>{ ' ' }
+								<strong>{ activity.type === 'navigation' ? 'Navigation' : 'Action' }</strong>
+								{ ' \u2014 ' }
+								{ activity.label }
+							</li>
+						) ) }
+					</ul>
+				</div>
+			) }
 		</div>
 	);
 }

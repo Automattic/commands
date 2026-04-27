@@ -29,6 +29,12 @@ export interface Command {
 	shortcut?: string;
 }
 
+/**
+ * A resolved param is either a final string value or an array of options
+ * for the user to choose from inside the palette.
+ */
+export type ResolvedParam = string | string[];
+
 export interface CommandsProps {
 	/** Array of command definitions */
 	commands: Command[];
@@ -36,11 +42,13 @@ export interface CommandsProps {
 	/**
 	 * Resolves route variables at runtime.
 	 * Receives the variable map (e.g., `{ id: ":id" }`) and returns resolved values.
+	 * A string value means the param is resolved. An array of strings means the
+	 * palette will show a sub-layer for the user to pick one.
 	 * May be async — the palette shows a loading state while resolving.
 	 */
 	resolver?: (
 		params: Record< string, string >
-	) => Record< string, string > | Promise< Record< string, string > >;
+	) => Record< string, ResolvedParam > | Promise< Record< string, ResolvedParam > >;
 
 	/** Called when a route command is selected with the fully resolved path */
 	onNavigate?: ( path: string ) => void;

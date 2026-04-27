@@ -67,7 +67,7 @@ describe( 'resolveRoute', () => {
 		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/42/:env/logs',
-			unresolved: [ 'env' ],
+			unresolved: [ { name: 'env' } ],
 		} );
 	} );
 
@@ -75,7 +75,7 @@ describe( 'resolveRoute', () => {
 		const result = await resolveRoute( '/apps/:appId/:env/logs' );
 		expect( result ).toEqual( {
 			path: '/apps/:appId/:env/logs',
-			unresolved: [ 'appId', 'env' ],
+			unresolved: [ { name: 'appId' }, { name: 'env' } ],
 		} );
 	} );
 
@@ -85,7 +85,7 @@ describe( 'resolveRoute', () => {
 		const result = await resolveRoute( '/apps/:appId', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/:appId',
-			unresolved: [ 'appId' ],
+			unresolved: [ { name: 'appId' } ],
 		} );
 	} );
 
@@ -95,7 +95,51 @@ describe( 'resolveRoute', () => {
 		const result = await resolveRoute( '/apps/:appId', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/:appId',
-			unresolved: [ 'appId' ],
+			unresolved: [ { name: 'appId' } ],
+		} );
+	} );
+
+	/* --- options support --- */
+
+	it( 'reports options when resolver returns an array for a param', async () => {
+		const resolver = () => ( {
+			appId: '42',
+			env: [ 'production', 'staging', 'development' ],
+		} );
+
+		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
+		expect( result ).toEqual( {
+			path: '/apps/42/:env/logs',
+			unresolved: [ { name: 'env', options: [ 'production', 'staging', 'development' ] } ],
+		} );
+	} );
+
+	it( 'reports multiple params with options', async () => {
+		const resolver = () => ( {
+			appId: [ 'app-one', 'app-two' ],
+			env: [ 'production', 'staging' ],
+		} );
+
+		const result = await resolveRoute( '/apps/:appId/:env', resolver );
+		expect( result ).toEqual( {
+			path: '/apps/:appId/:env',
+			unresolved: [
+				{ name: 'appId', options: [ 'app-one', 'app-two' ] },
+				{ name: 'env', options: [ 'production', 'staging' ] },
+			],
+		} );
+	} );
+
+	it( 'mixes resolved values and options in a single call', async () => {
+		const resolver = () => ( {
+			appId: 'my-app',
+			env: [ 'prod', 'dev' ],
+		} );
+
+		const result = await resolveRoute( '/apps/:appId/:env/audit', resolver );
+		expect( result ).toEqual( {
+			path: '/apps/my-app/:env/audit',
+			unresolved: [ { name: 'env', options: [ 'prod', 'dev' ] } ],
 		} );
 	} );
 } );

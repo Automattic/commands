@@ -1,10 +1,17 @@
 import type { CommandsProps } from './types';
 
+export interface UnresolvedParam {
+	/** The param name (e.g. "env") */
+	name: string;
+	/** When the resolver returns an array, these are the options the user can pick from */
+	options?: string[];
+}
+
 export interface ResolveRouteResult {
-	/** The route with resolved params replaced */
+	/** The route with resolved params replaced (unresolved ones stay as `:param`) */
 	path: string;
-	/** Param names that the resolver did not provide values for */
-	unresolved: string[];
+	/** Params that still need a value, optionally with selectable options */
+	unresolved: UnresolvedParam[];
 }
 
 const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
@@ -25,8 +32,10 @@ export function extractParams( route: string ): string[] {
  * 1. Extracts all `:param` patterns from the route.
  * 2. If no params exist, returns the route unchanged.
  * 3. Calls the resolver with a `{ param: ":param" }` map.
- * 4. Replaces each `:param` with the resolver's value.
- * 5. Params the resolver didn't resolve are listed in `unresolved`.
+ * 4. For each returned value:
+ *    - string → replaces the placeholder in the path.
+ *    - string[] → listed as unresolved with selectable options.
+ *    - missing / echoed back → listed as unresolved without options.
  */
 export async function resolveRoute(
 	route: string,
@@ -39,7 +48,10 @@ export async function resolveRoute(
 	}
 
 	if ( ! resolver ) {
-		return { path: route, unresolved: paramNames };
+		return {
+			path: route,
+			unresolved: paramNames.map( name => ( { name } ) ),
+		};
 	}
 
 	const paramMap: Record< string, string > = {};
@@ -50,14 +62,17 @@ export async function resolveRoute(
 	const resolved = await resolver( paramMap );
 
 	let path = route;
-	const unresolved: string[] = [];
+	const unresolved: UnresolvedParam[] = [];
 
 	for ( const name of paramNames ) {
 		const value = resolved[ name ];
-		if ( value !== undefined && value !== `:${ name }` ) {
+
+		if ( Array.isArray( value ) ) {
+			unresolved.push( { name, options: value } );
+		} else if ( typeof value === 'string' && value !== `:${ name }` ) {
 			path = path.replace( `:${ name }`, value );
 		} else {
-			unresolved.push( name );
+			unresolved.push( { name } );
 		}
 	}
 
