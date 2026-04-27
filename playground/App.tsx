@@ -66,21 +66,26 @@ const commands: Command[] = [
 ];
 
 /**
- * Sample resolver that derives what it can from context and returns
- * options arrays for params that require user selection.
+ * Sample async resolver that simulates an API call to fetch environment
+ * options. The 800ms delay lets you see the "Resolving…" loading state
+ * in the palette before the sub-layer appears.
  */
 const resolver: CommandsProps[ 'resolver' ] = params => {
-	const resolved: Record< string, string | string[] > = { ...params };
+	return new Promise( resolve => {
+		setTimeout( () => {
+			const resolved: Record< string, string | string[] > = { ...params };
 
-	if ( 'appId' in resolved ) {
-		resolved.appId = 'my-cool-app';
-	}
+			if ( 'appId' in resolved ) {
+				resolved.appId = 'my-cool-app';
+			}
 
-	if ( 'env' in resolved ) {
-		resolved.env = [ 'production', 'staging', 'development' ];
-	}
+			if ( 'env' in resolved ) {
+				resolved.env = [ 'production', 'staging', 'development' ];
+			}
 
-	return resolved;
+			resolve( resolved );
+		}, 800 );
+	} );
 };
 
 export function App() {
@@ -104,7 +109,8 @@ export function App() {
 				Press <kbd>Mod+k</kbd> to open the command palette.
 			</p>
 			<p style={ { fontSize: 14, color: '#666' } }>
-				Try &ldquo;Audit log&rdquo; to see the param-selection sub-layer (pick an environment).
+				Try &ldquo;Audit log&rdquo; to see the loading state followed by the param-selection
+				sub-layer.
 			</p>
 			<Commands
 				commands={ commands.map( command => ( {

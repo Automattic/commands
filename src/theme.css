@@ -125,3 +125,10 @@
 	color: var( --cmdk-placeholder, #999 );
 	font-size: 14px;
 }
+
+[data-cmdk-loading] {
+	padding: 24px 16px;
+	text-align: center;
+	color: var( --cmdk-placeholder, #999 );
+	font-size: 14px;
+}

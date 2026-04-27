@@ -681,6 +681,79 @@ describe( 'Commands', () => {
 		} );
 	} );
 
+	/* --- loading state --- */
+
+	describe( 'loading state', () => {
+		it( 'shows a loading indicator while the resolver is running', async () => {
+			let finish: ( value: Record< string, string > ) => void = () => {};
+			const resolver = () =>
+				new Promise< Record< string, string > >( resolve => {
+					finish = resolve;
+				} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render( <Commands commands={ commands } triggerKey="Meta+k" resolver={ resolver } /> );
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Loading indicator visible while resolver is pending
+			await waitFor( () => {
+				expect( screen.getByText( 'Resolving…' ) ).toBeInTheDocument();
+			} );
+
+			// Resolve the promise
+			finish( { appId: '42' } );
+
+			// Loading indicator disappears
+			await waitFor( () => {
+				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
+		it( 'clears loading state when dialog is closed during resolution', async () => {
+			const resolver = () =>
+				new Promise< Record< string, string > >( () => {
+					/* never resolves */
+				} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render( <Commands commands={ commands } triggerKey="Meta+k" resolver={ resolver } /> );
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Resolving…' ) ).toBeInTheDocument();
+			} );
+
+			// Close the dialog
+			fireEvent.keyDown( screen.getByRole( 'dialog' ), { key: 'Escape' } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+
+			// Reopen — should not show loading
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+			} );
+		} );
+	} );
+
 	/* --- trigger key --- */
 
 	describe( 'trigger key', () => {

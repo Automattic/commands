@@ -57,6 +57,7 @@ function Commands( {
 	recentStorageKey,
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
+	const [ resolving, setResolving ] = useState( false );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
 	const searchRef = useRef( '' );
 
@@ -74,6 +75,7 @@ function Commands( {
 	const shouldShowRecent = showRecent && recentCommands.length > 0;
 
 	const resetParamSelection = useCallback( () => {
+		setResolving( false );
 		setParamSelection( null );
 	}, [] );
 
@@ -103,7 +105,9 @@ function Commands( {
 			}
 
 			if ( item.route ) {
+				setResolving( true );
 				void resolveRoute( item.route, resolver ).then( result => {
+					setResolving( false );
 					if ( result.unresolved.length === 0 ) {
 						completeNavigation( result.path );
 					} else {
@@ -174,7 +178,12 @@ function Commands( {
 				/>
 			</div>
 			<CommandPrimitive.List>
-				{ paramSelection ? (
+				{ resolving && (
+					<CommandPrimitive.Loading>
+						<div data-cmdk-loading="">Resolving…</div>
+					</CommandPrimitive.Loading>
+				) }
+				{ ! resolving && paramSelection && (
 					<>
 						<CommandPrimitive.Empty>No matching options.</CommandPrimitive.Empty>
 						{ currentParam?.options ? (
@@ -197,7 +206,8 @@ function Commands( {
 							</CommandPrimitive.Empty>
 						) }
 					</>
-				) : (
+				) }
+				{ ! resolving && ! paramSelection && (
 					<>
 						<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
 						{ shouldShowRecent && (
