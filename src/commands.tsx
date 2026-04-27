@@ -60,6 +60,7 @@ function Commands( {
 	const [ resolving, setResolving ] = useState( false );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
 	const searchRef = useRef( '' );
+	const resolveGenRef = useRef( 0 );
 
 	useEffect( () => {
 		validateCommands( commands );
@@ -75,6 +76,7 @@ function Commands( {
 	const shouldShowRecent = showRecent && recentCommands.length > 0;
 
 	const resetParamSelection = useCallback( () => {
+		resolveGenRef.current += 1;
 		setResolving( false );
 		setParamSelection( null );
 	}, [] );
@@ -105,24 +107,35 @@ function Commands( {
 			}
 
 			if ( item.route ) {
+				const gen = ++resolveGenRef.current;
 				setResolving( true );
-				void resolveRoute( item.route, resolver ).then( result => {
-					setResolving( false );
-					if ( result.unresolved.length === 0 ) {
-						completeNavigation( result.path );
-					} else {
-						setParamSelection( {
-							path: result.path,
-							pending: result.unresolved,
-						} );
-					}
-				} );
+				void resolveRoute( item.route, resolver )
+					.then( result => {
+						if ( gen !== resolveGenRef.current ) {
+							return;
+						}
+						setResolving( false );
+						if ( result.unresolved.length === 0 ) {
+							completeNavigation( result.path );
+						} else {
+							setParamSelection( {
+								path: result.path,
+								pending: result.unresolved,
+							} );
+						}
+					} )
+					.catch( () => {
+						if ( gen !== resolveGenRef.current ) {
+							return;
+						}
+						resetParamSelection();
+					} );
 			} else {
 				item.action?.();
 				setOpen( false );
 			}
 		},
-		[ addRecent, completeNavigation, resolver, showRecent ]
+		[ addRecent, completeNavigation, resetParamSelection, resolver, showRecent ]
 	);
 
 	const handleParamOptionSelect = useCallback(
