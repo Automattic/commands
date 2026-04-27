@@ -64,7 +64,7 @@
     "react-dom": "^19.1.0",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
-    "vite": "^8.0.9",
+    "vite": "^8.0.10",
     "vitest": "^3.1.2"
   },
   "packageManager": "pnpm@10.14.0",
