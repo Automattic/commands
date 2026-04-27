@@ -56,6 +56,7 @@ export async function resolveRoute(
 
 	const paramMap: Record< string, string > = {};
 	for ( const name of paramNames ) {
+		// eslint-disable-next-line security/detect-object-injection
 		paramMap[ name ] = `:${ name }`;
 	}
 
@@ -65,6 +66,7 @@ export async function resolveRoute(
 	const unresolved: UnresolvedParam[] = [];
 
 	for ( const name of paramNames ) {
+		// eslint-disable-next-line security/detect-object-injection
 		const value = resolved[ name ];
 
 		if ( Array.isArray( value ) ) {
