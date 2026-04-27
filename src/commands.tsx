@@ -45,47 +45,18 @@ function Commands( {
 	recentStorageKey,
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
-	const [ search, setSearch ] = useState( '' );
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
 
-	const resetSearch = useCallback( () => {
-		setSearch( '' );
-	}, [] );
-
-	const closePalette = useCallback( () => {
-		resetSearch();
-		setOpen( false );
-	}, [ resetSearch ] );
-
-	useHotkey( triggerKey, () => {
-		setOpen( prevOpen => {
-			const nextOpen = ! prevOpen;
-			if ( ! nextOpen ) {
-				resetSearch();
-			}
-			return nextOpen;
-		} );
-	} );
-
-	const handleOpenChange = useCallback(
-		( nextOpen: boolean ) => {
-			if ( nextOpen ) {
-				setOpen( true );
-				return;
-			}
-			closePalette();
-		},
-		[ closePalette ]
-	);
+	useHotkey( triggerKey, () => setOpen( ! open ) );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
 	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
 		limit: recentLimit,
 		storageKey: recentStorageKey,
 	} );
-	const shouldShowRecent = showRecent && search.length === 0 && recentCommands.length > 0;
+	const shouldShowRecent = showRecent && recentCommands.length > 0;
 
 	const handleSelect = useCallback(
 		( item: Command ) => {
@@ -95,15 +66,15 @@ function Commands( {
 			} else {
 				item.action?.();
 			}
-			closePalette();
+			setOpen( false );
 		},
-		[ addRecent, closePalette, onNavigate ]
+		[ addRecent, onNavigate ]
 	);
 
 	return (
 		<CommandPrimitive.Dialog
 			open={ open }
-			onOpenChange={ handleOpenChange }
+			onOpenChange={ setOpen }
 			label="Command palette"
 			filter={ filter }
 			loop
@@ -114,11 +85,7 @@ function Commands( {
 			</VisuallyHidden>
 			<div data-cmdk-input-wrapper="">
 				<SearchIcon />
-				<CommandPrimitive.Input
-					placeholder={ placeholder }
-					value={ search }
-					onValueChange={ setSearch }
-				/>
+				<CommandPrimitive.Input placeholder={ placeholder } />
 			</div>
 			<CommandPrimitive.List>
 				<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
