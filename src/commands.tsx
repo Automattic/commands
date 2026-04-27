@@ -60,7 +60,10 @@ function Commands( {
 
 	const handleSelect = useCallback(
 		( item: Command ) => {
-			addRecent( item.id );
+			if ( showRecent ) {
+				addRecent( item.id );
+			}
+
 			if ( item.route ) {
 				onNavigate?.( item.route );
 			} else {
@@ -68,7 +71,7 @@ function Commands( {
 			}
 			setOpen( false );
 		},
-		[ addRecent, onNavigate ]
+		[ addRecent, onNavigate, showRecent ]
 	);
 
 	return (
