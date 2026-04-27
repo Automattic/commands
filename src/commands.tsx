@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
+import { useRecentCommands } from './hooks/use-recent-commands';
 import { validateCommands } from './validate-commands';
 
 import type { Command, CommandsProps } from './types';
@@ -39,20 +40,30 @@ function Commands( {
 	emptyState,
 	triggerKey = 'Mod+k',
 	onNavigate,
+	showRecent = true,
+	recentLimit,
+	recentStorageKey,
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
 
-	useHotkey( triggerKey, () => {
-		setOpen( prev => ! prev );
-	} );
+	useHotkey( triggerKey, () => setOpen( ! open ) );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
+	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
+		limit: recentLimit,
+		storageKey: recentStorageKey,
+	} );
+	const shouldShowRecent = showRecent && recentCommands.length > 0;
 
 	const handleSelect = useCallback(
 		( item: Command ) => {
+			if ( showRecent ) {
+				addRecent( item.id );
+			}
+
 			if ( item.route ) {
 				onNavigate?.( item.route );
 			} else {
@@ -60,7 +71,7 @@ function Commands( {
 			}
 			setOpen( false );
 		},
-		[ onNavigate ]
+		[ addRecent, onNavigate, showRecent ]
 	);
 
 	return (
@@ -81,6 +92,18 @@ function Commands( {
 			</div>
 			<CommandPrimitive.List>
 				<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
+				{ shouldShowRecent && (
+					<CommandPrimitive.Group heading="Recently Used">
+						{ recentCommands.map( item => (
+							<CommandItem
+								key={ item.id }
+								command={ item }
+								value={ `recent:${ item.id }` }
+								onSelect={ () => handleSelect( item ) }
+							/>
+						) ) }
+					</CommandPrimitive.Group>
+				) }
 				{ Array.from( grouped.entries() ).map( ( [ group, items ] ) =>
 					group ? (
 						<CommandPrimitive.Group key={ group } heading={ group }>
@@ -109,13 +132,16 @@ function Commands( {
 
 interface CommandItemProps {
 	command: Command;
+	value?: string;
 	onSelect: () => void;
 }
-function CommandItem( { command, onSelect }: CommandItemProps ) {
+
+function CommandItem( { command, value = command.id, onSelect }: CommandItemProps ) {
 	const typeLabel = command.route ? 'Link' : 'Action';
+	const keywords = [ command.title, ...( command.keywords ?? [] ) ];
 
 	return (
-		<CommandPrimitive.Item value={ command.id } keywords={ command.keywords } onSelect={ onSelect }>
+		<CommandPrimitive.Item value={ value } keywords={ keywords } onSelect={ onSelect }>
 			{ command.icon && <span data-slot="icon">{ command.icon }</span> }
 			<span data-slot="label">
 				<span data-slot="title">{ command.title }</span>
