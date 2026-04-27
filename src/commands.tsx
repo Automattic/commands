@@ -172,7 +172,7 @@ function Commands( {
 			key={ currentParam?.name ?? 'commands' }
 			open={ open }
 			onOpenChange={ handleOpenChange }
-			label="Command palette"
+			label={ currentParam ? `Select ${ currentParam.name }` : 'Command palette' }
 			filter={ paramSelection ? undefined : filter }
 			loop
 		>
