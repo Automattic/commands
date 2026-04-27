@@ -25,6 +25,10 @@
   "files": [
     "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "vite --config playground/vite.config.ts",
@@ -36,7 +40,22 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "keywords": [],
+  "keywords": [
+    "automattic",
+    "cmdk",
+    "command-palette",
+    "commands",
+    "react"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Automattic/commands.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Automattic/commands/issues"
+  },
+  "homepage": "https://github.com/Automattic/commands#readme",
+  "author": "Automattic Inc.",
   "license": "GPL-2.0-or-later",
   "peerDependencies": {
     "react": ">=18",
