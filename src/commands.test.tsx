@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { Commands } from './commands';
 import { cmd, dispatchKey } from './test-utils';
@@ -442,6 +442,126 @@ describe( 'Commands', () => {
 
 			await waitFor( () => {
 				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+		} );
+	} );
+
+	/* --- route resolution --- */
+
+	describe( 'route resolution', () => {
+		it( 'navigates to a resolved route when all params are resolved', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( { appId: '42' } );
+			const commands = [
+				cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/42/logs' );
+			} );
+		} );
+
+		it( 'keeps the palette open when params are unresolved', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {} );
+			const commands = [
+				cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Palette stays open and onNavigate is not called
+			await waitFor( () => {
+				expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
+			} );
+			expect( onNavigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'navigates to param-free routes without a resolver', async () => {
+			const onNavigate = vi.fn();
+			const commands = [
+				cmd( { id: 'home', title: 'Home', route: '/home' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Home' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/home' );
+			} );
+		} );
+
+		it( 'works with an async resolver', async () => {
+			const onNavigate = vi.fn();
+			const resolver = async () => ( { id: '7' } );
+			const commands = [
+				cmd( { id: 'detail', title: 'Detail', route: '/items/:id' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Detail' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/items/7' );
 			} );
 		} );
 	} );
