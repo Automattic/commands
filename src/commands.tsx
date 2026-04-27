@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
 import { useRecentCommands } from './hooks/use-recent-commands';
+import { resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
 import type { Command, CommandsProps } from './types';
@@ -35,6 +36,7 @@ function SearchIcon() {
 
 function Commands( {
 	commands,
+	resolver,
 	placeholder = 'Search commands...',
 	filter,
 	emptyState,
@@ -65,13 +67,18 @@ function Commands( {
 			}
 
 			if ( item.route ) {
-				onNavigate?.( item.route );
+				void resolveRoute( item.route, resolver ).then( result => {
+					if ( result.unresolved.length === 0 ) {
+						onNavigate?.( result.path );
+						setOpen( false );
+					}
+				} );
 			} else {
 				item.action?.();
+				setOpen( false );
 			}
-			setOpen( false );
 		},
-		[ addRecent, onNavigate, showRecent ]
+		[ addRecent, onNavigate, resolver, showRecent ]
 	);
 
 	return (
