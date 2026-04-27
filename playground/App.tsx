@@ -93,6 +93,10 @@ export function App() {
 		] );
 	};
 
+	const handleAction = ( command: Command ) => {
+		addActivity( 'action', command.title );
+	};
+
 	return (
 		<div style={ { padding: 24, fontFamily: 'system-ui, sans-serif' } }>
 			<h1>@automattic/commands playground</h1>
@@ -103,14 +107,17 @@ export function App() {
 				Try &ldquo;Audit log&rdquo; to see the param-selection sub-layer (pick an environment).
 			</p>
 			<Commands
-				commands={ commands }
+				commands={ commands.map( command => ( {
+					...command,
+					action: command.action ? () => handleAction( command ) : undefined,
+				} ) ) }
 				triggerKey="Mod+k"
 				resolver={ resolver }
 				onNavigate={ path => addActivity( 'navigation', path ) }
 			/>
 			{ activities.length > 0 && (
 				<div style={ { marginTop: 24 } }>
-					<h2>Activity log</h2>
+					<h2>Activities</h2>
 					<ul style={ { listStyle: 'none', padding: 0, margin: 0 } }>
 						{ activities.map( ( activity, idx ) => (
 							<li
