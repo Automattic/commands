@@ -70,22 +70,19 @@ const commands: Command[] = [
  * options. The 800ms delay lets you see the "Resolving…" loading state
  * in the palette before the sub-layer appears.
  */
-const resolver: CommandsProps[ 'resolver' ] = params => {
-	return new Promise( resolve => {
-		setTimeout( () => {
-			const resolved: Record< string, string | string[] > = { ...params };
+const resolver: CommandsProps[ 'resolver' ] = async params => {
+	const resolved: Record< string, string | string[] > = { ...params };
 
-			if ( 'appId' in resolved ) {
-				resolved.appId = 'my-cool-app';
-			}
+	if ( 'appId' in resolved ) {
+		resolved.appId = 'my-cool-app';
+	}
 
-			if ( 'env' in resolved ) {
-				resolved.env = [ 'production', 'staging', 'development' ];
-			}
+	if ( 'env' in resolved ) {
+		await new Promise( resolve => setTimeout( resolve, 800 ) );
+		resolved.env = [ 'production', 'staging', 'development' ];
+	}
 
-			resolve( resolved );
-		}, 800 );
-	} );
+	return resolved;
 };
 
 export function App() {
