@@ -716,6 +716,88 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'clears loading state when the resolver rejects', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => Promise.reject( new Error( 'boom' ) );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Loading state clears after rejection
+			await waitFor( () => {
+				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+			} );
+
+			// Palette returns to normal command list
+			expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			expect( onNavigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'ignores stale resolver results after dialog close and reopen', async () => {
+			const onNavigate = vi.fn();
+			let finish: ( value: Record< string, string > ) => void = () => {};
+			const resolver = () =>
+				new Promise< Record< string, string > >( resolve => {
+					finish = resolve;
+				} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Resolving…' ) ).toBeInTheDocument();
+			} );
+
+			// Close the dialog while resolver is pending
+			fireEvent.keyDown( screen.getByRole( 'dialog' ), { key: 'Escape' } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+
+			// Stale resolver finishes — should be ignored
+			finish( { appId: '42' } );
+
+			// Reopen — should show the normal command list, not navigate
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+			} );
+			expect( onNavigate ).not.toHaveBeenCalled();
+		} );
+
 		it( 'clears loading state when dialog is closed during resolution', async () => {
 			const resolver = () =>
 				new Promise< Record< string, string > >( () => {
