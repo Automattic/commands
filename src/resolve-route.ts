@@ -72,7 +72,7 @@ export async function resolveRoute(
 		if ( Array.isArray( value ) ) {
 			unresolved.push( { name, options: value } );
 		} else if ( typeof value === 'string' && value !== `:${ name }` ) {
-			path = path.replace( `:${ name }`, value );
+			path = path.split( `:${ name }` ).join( value );
 		} else {
 			unresolved.push( { name } );
 		}
