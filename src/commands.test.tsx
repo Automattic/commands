@@ -727,6 +727,7 @@ describe( 'Commands', () => {
 					triggerKey="Meta+k"
 					resolver={ resolver }
 					onNavigate={ onNavigate }
+					showRecent={ false }
 				/>
 			);
 			openPalette();
@@ -763,6 +764,7 @@ describe( 'Commands', () => {
 					triggerKey="Meta+k"
 					resolver={ resolver }
 					onNavigate={ onNavigate }
+					showRecent={ false }
 				/>
 			);
 			openPalette();
@@ -805,7 +807,14 @@ describe( 'Commands', () => {
 				} );
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
-			render( <Commands commands={ commands } triggerKey="Meta+k" resolver={ resolver } /> );
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
 			openPalette();
 
 			await waitFor( () => {

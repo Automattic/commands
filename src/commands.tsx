@@ -197,76 +197,111 @@ function Commands( {
 				/>
 			</div>
 			<CommandPrimitive.List>
-				{ resolving && (
-					<CommandPrimitive.Loading>
-						<div data-cmdk-loading="">Resolving…</div>
-					</CommandPrimitive.Loading>
-				) }
-				{ ! resolving && paramSelection && (
-					<>
-						<CommandPrimitive.Empty>No matching options.</CommandPrimitive.Empty>
-						{ currentParam?.options ? (
-							<CommandPrimitive.Group heading={ `Choose ${ currentParam.name }` }>
-								{ currentParam.options.map( option => (
-									<CommandPrimitive.Item
-										key={ option }
-										value={ option }
-										onSelect={ () => handleParamOptionSelect( option ) }
-									>
-										<span data-slot="label">
-											<span data-slot="title">{ option }</span>
-										</span>
-									</CommandPrimitive.Item>
-								) ) }
-							</CommandPrimitive.Group>
-						) : (
-							<CommandPrimitive.Empty>
-								No options available for { currentParam?.name }.
-							</CommandPrimitive.Empty>
-						) }
-					</>
-				) }
-				{ ! resolving && ! paramSelection && (
-					<>
-						<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
-						{ shouldShowRecent && (
-							<CommandPrimitive.Group heading="Recently Used">
-								{ recentCommands.map( item => (
-									<CommandItem
-										key={ item.id }
-										command={ item }
-										value={ `recent:${ item.id }` }
-										onSelect={ () => handleSelect( item ) }
-									/>
-								) ) }
-							</CommandPrimitive.Group>
-						) }
-						{ Array.from( grouped.entries() ).map( ( [ group, items ] ) =>
-							group ? (
-								<CommandPrimitive.Group key={ group } heading={ group }>
-									{ items.map( item => (
-										<CommandItem
-											key={ item.id }
-											command={ item }
-											onSelect={ () => handleSelect( item ) }
-										/>
-									) ) }
-								</CommandPrimitive.Group>
-							) : (
-								items.map( item => (
-									<CommandItem
-										key={ item.id }
-										command={ item }
-										onSelect={ () => handleSelect( item ) }
-									/>
-								) )
-							)
-						) }
-					</>
-
-				) }
+				<CommandListContent
+					resolving={ resolving }
+					paramSelection={ paramSelection }
+					currentParam={ currentParam }
+					emptyState={ emptyState }
+					shouldShowRecent={ shouldShowRecent }
+					recentCommands={ recentCommands }
+					grouped={ grouped }
+					onSelect={ handleSelect }
+					onParamOptionSelect={ handleParamOptionSelect }
+				/>
 			</CommandPrimitive.List>
 		</CommandPrimitive.Dialog>
+	);
+}
+
+/* ---------- List content ---------- */
+
+interface CommandListContentProps {
+	resolving: boolean;
+	paramSelection: ParamSelectionState | null;
+	currentParam: UnresolvedParam | null;
+	emptyState: CommandsProps[ 'emptyState' ];
+	shouldShowRecent: boolean;
+	recentCommands: Command[];
+	grouped: Map< string, Command[] >;
+	onSelect: ( item: Command ) => void;
+	onParamOptionSelect: ( value: string ) => void;
+}
+
+function CommandListContent( {
+	resolving,
+	paramSelection,
+	currentParam,
+	emptyState,
+	shouldShowRecent,
+	recentCommands,
+	grouped,
+	onSelect,
+	onParamOptionSelect,
+}: CommandListContentProps ) {
+	if ( resolving ) {
+		return (
+			<CommandPrimitive.Loading>
+				<div data-cmdk-loading="">Resolving…</div>
+			</CommandPrimitive.Loading>
+		);
+	}
+
+	if ( paramSelection ) {
+		return (
+			<>
+				<CommandPrimitive.Empty>No matching options.</CommandPrimitive.Empty>
+				{ currentParam?.options ? (
+					<CommandPrimitive.Group heading={ `Choose ${ currentParam.name }` }>
+						{ currentParam.options.map( option => (
+							<CommandPrimitive.Item
+								key={ option }
+								value={ option }
+								onSelect={ () => onParamOptionSelect( option ) }
+							>
+								<span data-slot="label">
+									<span data-slot="title">{ option }</span>
+								</span>
+							</CommandPrimitive.Item>
+						) ) }
+					</CommandPrimitive.Group>
+				) : (
+					<CommandPrimitive.Empty>
+						No options available for { currentParam?.name }.
+					</CommandPrimitive.Empty>
+				) }
+			</>
+		);
+	}
+
+	return (
+		<>
+			<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
+			{ shouldShowRecent && (
+				<CommandPrimitive.Group heading="Recently Used">
+					{ recentCommands.map( item => (
+						<CommandItem
+							key={ item.id }
+							command={ item }
+							value={ `recent:${ item.id }` }
+							onSelect={ () => onSelect( item ) }
+						/>
+					) ) }
+				</CommandPrimitive.Group>
+			) }
+			{ Array.from( grouped.entries() ).map( ( [ group, items ] ) =>
+				group ? (
+					<CommandPrimitive.Group key={ group } heading={ group }>
+						{ items.map( item => (
+							<CommandItem key={ item.id } command={ item } onSelect={ () => onSelect( item ) } />
+						) ) }
+					</CommandPrimitive.Group>
+				) : (
+					items.map( item => (
+						<CommandItem key={ item.id } command={ item } onSelect={ () => onSelect( item ) } />
+					) )
+				)
+			) }
+		</>
 	);
 }
 
