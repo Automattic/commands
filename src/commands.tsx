@@ -59,13 +59,7 @@ function Commands( {
 	const [ open, setOpen ] = useState( false );
 	const [ resolving, setResolving ] = useState( false );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
-	const searchRef = useRef( '' );
 	const resolveGenRef = useRef( 0 );
-	const paramSelectionRef = useRef< ParamSelectionState | null >( null );
-
-	useEffect( () => {
-		paramSelectionRef.current = paramSelection;
-	}, [ paramSelection ] );
 
 	useEffect( () => {
 		validateCommands( commands );
@@ -145,13 +139,12 @@ function Commands( {
 
 	const handleParamOptionSelect = useCallback(
 		( value: string ) => {
-			const selection = paramSelectionRef.current;
-			if ( ! selection ) {
+			if ( ! paramSelection ) {
 				return;
 			}
-			const current = selection.pending[ 0 ];
-			const updatedPath = replaceRouteParam( selection.path, current.name, value );
-			const remaining = selection.pending.slice( 1 );
+			const current = paramSelection.pending[ 0 ];
+			const updatedPath = replaceRouteParam( paramSelection.path, current.name, value );
+			const remaining = paramSelection.pending.slice( 1 );
 
 			if ( remaining.length === 0 ) {
 				completeNavigation( updatedPath );
@@ -159,12 +152,12 @@ function Commands( {
 				setParamSelection( { path: updatedPath, pending: remaining } );
 			}
 		},
-		[ completeNavigation ]
+		[ paramSelection, completeNavigation ]
 	);
 
 	const handleParamKeyDown = useCallback(
-		( event: React.KeyboardEvent ) => {
-			if ( event.key === 'Backspace' && searchRef.current === '' ) {
+		( event: React.KeyboardEvent< HTMLInputElement > ) => {
+			if ( event.key === 'Backspace' && event.currentTarget.value === '' ) {
 				resetParamSelection();
 			}
 		},
@@ -190,9 +183,6 @@ function Commands( {
 				<SearchIcon />
 				<CommandPrimitive.Input
 					placeholder={ currentParam ? `Select ${ currentParam.name }...` : placeholder }
-					onValueChange={ val => {
-						searchRef.current = val;
-					} }
 					onKeyDown={ paramSelection ? handleParamKeyDown : undefined }
 				/>
 			</div>

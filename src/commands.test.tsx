@@ -694,6 +694,51 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'exits param selection on Backspace even after prior command search', async () => {
+			const resolver = () => ( {
+				appId: '42',
+				env: [ 'production', 'staging' ],
+			} );
+			const commands = [
+				cmd( { id: 'audit', title: 'Audit Log', route: '/apps/:appId/:env/audit' } ),
+				cmd( { id: 'dashboard', title: 'Dashboard', route: '/dashboard' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			// Search for the command first (populates the input)
+			typeSearch( 'Audit' );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit Log' ) ).toBeInTheDocument();
+			} );
+
+			// Select the command — enters param selection
+			fireEvent.click( screen.getByText( 'Audit Log' ) );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			// Backspace on the visually empty param input should exit
+			const paramInput = screen.getByPlaceholderText( 'Select env...' );
+			fireEvent.keyDown( paramInput, { key: 'Backspace' } );
+
+			// Should be back to the command list
+			await waitFor( () => {
+				expect( screen.queryByText( 'production' ) ).not.toBeInTheDocument();
+				expect( screen.getByText( 'Audit Log' ) ).toBeInTheDocument();
+			} );
+		} );
+
 		it( 'shows the sub-layer when params are unresolved without options', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => ( {} );
