@@ -128,10 +128,11 @@ function Commands( {
 							} );
 						}
 					} )
-					.catch( () => {
+					.catch( ( error: unknown ) => {
 						if ( gen !== resolveGenRef.current ) {
 							return;
 						}
+						console.error( '[@automattic/commands] Route resolution failed:', error );
 						resetParamSelection();
 					} );
 			} else {

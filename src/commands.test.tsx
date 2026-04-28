@@ -804,7 +804,8 @@ describe( 'Commands', () => {
 			} );
 		} );
 
-		it( 'clears loading state when the resolver rejects', async () => {
+		it( 'clears loading state and logs when the resolver rejects', async () => {
+			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
 			const onNavigate = vi.fn();
 			const resolver = () => Promise.reject( new Error( 'boom' ) );
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
@@ -835,6 +836,11 @@ describe( 'Commands', () => {
 			// Palette returns to normal command list
 			expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
 			expect( onNavigate ).not.toHaveBeenCalled();
+			expect( errorSpy ).toHaveBeenCalledWith(
+				'[@automattic/commands] Route resolution failed:',
+				expect.any( Error )
+			);
+			errorSpy.mockRestore();
 		} );
 
 		it( 'ignores stale resolver results after dialog close and reopen', async () => {
