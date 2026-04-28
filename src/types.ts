@@ -1,5 +1,26 @@
 import type { ReactNode } from 'react';
 
+export interface UnresolvedParam {
+	/** The param name (e.g. "env") */
+	name: string;
+	/** When the resolver returns an array, these are the options the user can pick from */
+	options?: string[];
+}
+
+export interface ResolveRouteResult {
+	/** The route with resolved params replaced (unresolved ones stay as `:param`) */
+	path: string;
+	/** Params that still need a value, optionally with selectable options */
+	unresolved: UnresolvedParam[];
+}
+
+export interface ParamSelectionState {
+	/** The partially-resolved route path */
+	path: string;
+	/** Queue of params that still need a user selection */
+	pending: UnresolvedParam[];
+}
+
 export interface Command {
 	/** Unique identifier (also used for recency tracking) */
 	id: string;
@@ -29,18 +50,26 @@ export interface Command {
 	shortcut?: string;
 }
 
+/**
+ * A resolved param is either a final string value or an array of options
+ * for the user to choose from inside the palette.
+ */
+export type ResolvedParam = string | string[];
+
 export interface CommandsProps {
 	/** Array of command definitions */
 	commands: Command[];
 
 	/**
 	 * Resolves route variables at runtime.
-	 * Receives the variable map (e.g., `{ id: ":id" }`) and returns resolved values.
+	 * Receives param names (e.g., `["id", "env"]`) and returns resolved values.
+	 * A string value means the param is resolved. An array of strings means the
+	 * palette will show a sub-layer for the user to pick one.
 	 * May be async — the palette shows a loading state while resolving.
 	 */
 	resolver?: (
-		params: Record< string, string >
-	) => Record< string, string > | Promise< Record< string, string > >;
+		params: string[]
+	) => Record< string, ResolvedParam > | Promise< Record< string, ResolvedParam > >;
 
 	/** Called when a route command is selected with the fully resolved path */
 	onNavigate?: ( path: string ) => void;
@@ -72,4 +101,16 @@ export interface CommandsProps {
 
 	/** localStorage key for recent commands. Default: `"@automattic/commands:recent"` */
 	recentStorageKey?: string;
+}
+
+export interface CommandListContentProps {
+	resolving: boolean;
+	paramSelection: ParamSelectionState | null;
+	currentParam: UnresolvedParam | null;
+	emptyState: CommandsProps[ 'emptyState' ];
+	shouldShowRecent: boolean;
+	recentCommands: Command[];
+	grouped: Map< string, Command[] >;
+	onSelect: ( item: Command ) => void;
+	onParamOptionSelect: ( value: string ) => void;
 }

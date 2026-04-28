@@ -196,3 +196,11 @@
 		transition: none;
 	}
 }
+
+[cmdk-loading] {
+	padding: var( --cmdk-loading-padding-y, 24px ) var( --cmdk-loading-padding-x, 16px );
+	text-align: center;
+	color: var( --cmdk-placeholder, var( --wpds-color-fg-content-neutral-subtle, #757575 ) );
+	font-size: var( --cmdk-loading-font-size, 14px );
+	line-height: var( --cmdk-loading-line-height, 20px );
+}

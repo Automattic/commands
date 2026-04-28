@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { describe, it, expect } from 'vitest';
+import { resolve as resolvePath } from 'node:path';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import { Commands } from './commands';
 import { cmd, dispatchKey } from './test-utils';
@@ -15,10 +15,28 @@ function openPalette() {
 	dispatchKey( 'k', { meta: true } );
 }
 
+/** Open the palette and wait for the dialog to be visible. */
+async function openPaletteAndWait() {
+	openPalette();
+
+	await waitFor( () => {
+		expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
+	} );
+}
+
 /** Type into the search input once the dialog is visible. */
 function typeSearch( value: string ) {
 	const input = screen.getByPlaceholderText( 'Search commands...' );
 	fireEvent.change( input, { target: { value } } );
+}
+
+/** Select a visible command by title and wait for the dialog to close. */
+async function selectCommand( title: string ) {
+	fireEvent.click( screen.getByText( title ) );
+
+	await waitFor( () => {
+		expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+	} );
 }
 
 /* ---------- fixtures ---------- */
@@ -45,6 +63,10 @@ const mixedCommands: Command[] = [
 /* ---------- tests ---------- */
 
 describe( 'Commands', () => {
+	beforeEach( () => {
+		window.localStorage.clear();
+	} );
+
 	/* --- open / close --- */
 
 	describe( 'open / close', () => {
@@ -57,6 +79,47 @@ describe( 'Commands', () => {
 
 			await waitFor( () => {
 				expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
+			} );
+		} );
+
+		it( 'resets param selection when closed via trigger key', async () => {
+			const resolver = () => ( {
+				appId: '42',
+				env: [ 'production', 'staging' ],
+			} );
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			// Select the command to enter param selection
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			// Close via trigger key (not Escape or onOpenChange)
+			dispatchKey( 'k', { meta: true } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+
+			// Reopen — should show normal command list, not stale param selection
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'production' ) ).not.toBeInTheDocument();
 			} );
 		} );
 
@@ -239,6 +302,64 @@ describe( 'Commands', () => {
 		} );
 	} );
 
+	/* --- recent commands --- */
+
+	describe( 'recent commands', () => {
+		it( 'renders recently used commands above other groups when search is empty', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+
+			const recentGroup = screen.getByText( 'Recently Used' ).closest( '[cmdk-group]' );
+			expect( recentGroup ).toBeInTheDocument();
+			expect( within( recentGroup as HTMLElement ).getByText( 'Settings' ) ).toBeInTheDocument();
+
+			const list = screen.getByRole( 'dialog' ).querySelector( '[cmdk-list]' ) as HTMLElement;
+			const pagesGroup = screen.getByText( 'Pages' ).closest( '[cmdk-group]' ) as HTMLElement;
+			const groups = Array.from( list.querySelectorAll( '[cmdk-group]' ) );
+
+			expect( groups[ 0 ] ).toBe( recentGroup );
+			expect( groups[ 1 ] ).toBe( pagesGroup );
+		} );
+
+		it( 'does not render recently used commands when showRecent is false', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" showRecent={ false } /> );
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+
+			expect( screen.queryByText( 'Recently Used' ) ).not.toBeInTheDocument();
+		} );
+
+		it( 'limits recently used commands with recentLimit', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" recentLimit={ 2 } /> );
+
+			await openPaletteAndWait();
+			await selectCommand( 'Dashboard' );
+
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+			await selectCommand( 'Toggle Dark Mode' );
+
+			await openPaletteAndWait();
+
+			const recentGroup = screen.getByText( 'Recently Used' ).closest( '[cmdk-group]' );
+			expect( recentGroup ).toBeInTheDocument();
+			expect(
+				within( recentGroup as HTMLElement ).getByText( 'Toggle Dark Mode' )
+			).toBeInTheDocument();
+			expect( within( recentGroup as HTMLElement ).getByText( 'Settings' ) ).toBeInTheDocument();
+			expect(
+				within( recentGroup as HTMLElement ).queryByText( 'Dashboard' )
+			).not.toBeInTheDocument();
+		} );
+	} );
+
 	/* --- search / filtering --- */
 
 	describe( 'search', () => {
@@ -255,6 +376,29 @@ describe( 'Commands', () => {
 			await waitFor( () => {
 				expect( screen.getByText( 'Settings' ) ).toBeInTheDocument();
 				expect( screen.queryByText( 'Dashboard' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
+		it( 'matches titles when the command id differs from the display text', async () => {
+			const commands = [
+				cmd( {
+					id: 'logout',
+					title: 'Log out',
+					action: () => {},
+					route: undefined,
+				} ),
+			];
+			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Log out' ) ).toBeInTheDocument();
+			} );
+
+			typeSearch( 'Log out' );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Log out' ) ).toBeInTheDocument();
 			} );
 		} );
 
@@ -388,6 +532,456 @@ describe( 'Commands', () => {
 		} );
 	} );
 
+	/* --- route resolution --- */
+
+	describe( 'route resolution', () => {
+		it( 'navigates to a resolved route when all params are resolved', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( { appId: '42' } );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/42/logs' );
+			} );
+		} );
+
+		it( 'navigates to param-free routes without a resolver', async () => {
+			const onNavigate = vi.fn();
+			const commands = [ cmd( { id: 'home', title: 'Home', route: '/home' } ) ];
+
+			render( <Commands commands={ commands } triggerKey="Meta+k" onNavigate={ onNavigate } /> );
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Home' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/home' );
+			} );
+		} );
+
+		it( 'works with an async resolver', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => Promise.resolve( { id: '7' } );
+			const commands = [ cmd( { id: 'detail', title: 'Detail', route: '/items/:id' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Detail' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/items/7' );
+			} );
+		} );
+	} );
+
+	/* --- param selection sub-layer --- */
+
+	describe( 'param selection sub-layer', () => {
+		it( 'shows options when resolver returns an array for a param', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {
+				appId: '42',
+				env: [ 'production', 'staging' ],
+			} );
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+			} );
+
+			// Select the command
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Sub-layer appears with options
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'staging' ) ).toBeInTheDocument();
+			} );
+			expect( onNavigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'navigates after selecting an option', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {
+				appId: '42',
+				env: [ 'production', 'staging' ],
+			} );
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+			} );
+
+			// Select the command
+			let input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Wait for sub-layer
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			// Select the option
+			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/42/production/audit' );
+			} );
+		} );
+
+		it( 'steps through multiple unresolved params sequentially', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {
+				appId: [ 'app-one', 'app-two' ],
+				env: [ 'prod', 'dev' ],
+			} );
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+			} );
+
+			// Select the command
+			let input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// First param: appId options
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'app-two' ) ).toBeInTheDocument();
+			} );
+
+			// Select first option (app-one is selected by default)
+			input = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Second param: env options
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'dev' ) ).toBeInTheDocument();
+			} );
+
+			// Select first option (prod is selected by default)
+			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/app-one/prod/audit' );
+			} );
+		} );
+
+		it( 'exits param selection on Backspace even after prior command search', async () => {
+			const resolver = () => ( {
+				appId: '42',
+				env: [ 'production', 'staging' ],
+			} );
+			const commands = [
+				cmd( { id: 'audit', title: 'Audit Log', route: '/apps/:appId/:env/audit' } ),
+				cmd( { id: 'dashboard', title: 'Dashboard', route: '/dashboard' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			// Search for the command first (populates the input)
+			typeSearch( 'Audit' );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit Log' ) ).toBeInTheDocument();
+			} );
+
+			// Select the command — enters param selection
+			fireEvent.click( screen.getByText( 'Audit Log' ) );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			// Backspace on the visually empty param input should exit
+			const paramInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( paramInput, { key: 'Backspace' } );
+
+			// Should be back to the command list
+			await waitFor( () => {
+				expect( screen.queryByText( 'production' ) ).not.toBeInTheDocument();
+				expect( screen.getByText( 'Audit Log' ) ).toBeInTheDocument();
+			} );
+		} );
+
+		it( 'shows the sub-layer when params are unresolved without options', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => ( {} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Palette stays open with the sub-layer (no options to show)
+			await waitFor( () => {
+				expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
+			} );
+			expect( onNavigate ).not.toHaveBeenCalled();
+		} );
+	} );
+
+	/* --- loading state --- */
+
+	describe( 'loading state', () => {
+		it( 'shows a loading indicator while the resolver is running', async () => {
+			let finish: ( value: Record< string, string > ) => void = () => {};
+			const resolver = () =>
+				new Promise< Record< string, string > >( resolve => {
+					finish = resolve;
+				} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render( <Commands commands={ commands } triggerKey="Meta+k" resolver={ resolver } /> );
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Loading indicator visible while resolver is pending
+			await waitFor( () => {
+				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+			} );
+
+			// Resolve the promise
+			finish( { appId: '42' } );
+
+			// Loading indicator disappears
+			await waitFor( () => {
+				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
+		it( 'clears loading state and logs when the resolver rejects', async () => {
+			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+			const onNavigate = vi.fn();
+			const resolver = () => Promise.reject( new Error( 'boom' ) );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+					showRecent={ false }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Loading state clears after rejection
+			await waitFor( () => {
+				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+			} );
+
+			// Palette returns to normal command list
+			expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			expect( onNavigate ).not.toHaveBeenCalled();
+			expect( errorSpy ).toHaveBeenCalledWith(
+				'[@automattic/commands] Route resolution failed:',
+				expect.any( Error )
+			);
+			errorSpy.mockRestore();
+		} );
+
+		it( 'ignores stale resolver results after dialog close and reopen', async () => {
+			const onNavigate = vi.fn();
+			let finish: ( value: Record< string, string > ) => void = () => {};
+			const resolver = () =>
+				new Promise< Record< string, string > >( resolve => {
+					finish = resolve;
+				} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+					showRecent={ false }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+			} );
+
+			// Close the dialog while resolver is pending
+			fireEvent.keyDown( screen.getByRole( 'dialog' ), { key: 'Escape' } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+
+			// Stale resolver finishes — should be ignored
+			finish( { appId: '42' } );
+
+			// Reopen — should show the normal command list, not navigate
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+			} );
+			expect( onNavigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'clears loading state when dialog is closed during resolution', async () => {
+			const resolver = () =>
+				new Promise< Record< string, string > >( () => {
+					/* never resolves */
+				} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+			} );
+
+			// Close the dialog
+			fireEvent.keyDown( screen.getByRole( 'dialog' ), { key: 'Escape' } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+
+			// Reopen — should not show loading
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+			} );
+		} );
+	} );
+
 	/* --- trigger key --- */
 
 	describe( 'trigger key', () => {
@@ -418,7 +1012,7 @@ describe( 'Commands', () => {
 } );
 
 describe( 'theme CSS contract', () => {
-	const themeCss = readFileSync( resolve( 'src/theme.css' ), 'utf8' );
+	const themeCss = readFileSync( resolvePath( 'src/theme.css' ), 'utf8' );
 
 	it( 'includes the required public custom properties', () => {
 		const requiredVariables = [
@@ -477,6 +1071,7 @@ describe( 'theme CSS contract', () => {
 			'[cmdk-item-shortcut]',
 			'[cmdk-item-type]',
 			'[cmdk-empty]',
+			'[cmdk-loading]',
 		];
 
 		for ( const selector of requiredSelectors ) {

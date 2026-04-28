@@ -1,26 +1,14 @@
 # @automattic/commands
 
-Command palette components for WordPress.com, powered by [cmdk](https://cmdk.paco.me/).
+Config-driven command palette components for React, powered by [cmdk](https://cmdk.paco.me/).
 
-## Setup
+## Install
 
 ```bash
-nvm use
-pnpm install
+npm install @automattic/commands
 ```
 
-## Scripts
-
-| Command           | Description                                                                   |
-| ----------------- | ----------------------------------------------------------------------------- |
-| `pnpm build`      | Build ESM + CJS output to `dist/`                                             |
-| `pnpm dev`        | Start the Vite playground with HMR against `src/` at `http://localhost:5173/` |
-| `pnpm dev:dist`   | Build first, then start the playground against `dist/`                        |
-| `pnpm test`       | Run tests (Vitest + React Testing Library)                                    |
-| `pnpm test:watch` | Run tests in watch mode                                                       |
-| `pnpm lint`       | Lint with ESLint                                                              |
-| `pnpm lint:fix`   | Lint and auto-fix                                                             |
-| `pnpm format`     | Format with Prettier                                                          |
+This package requires `react` and `react-dom` >= 18 as peer dependencies.
 
 ## Usage
 
@@ -33,27 +21,25 @@ const commands: Command[] = [
 	{
 		id: 'dashboard',
 		title: 'Dashboard',
+		description: 'Go to dashboard',
 		route: '/dashboard',
 		group: 'Pages',
 		keywords: [ 'home', 'overview' ],
 	},
 	{
-		id: 'clear-cache',
-		title: 'Clear cache',
-		action: () => console.log( 'Clearing cache' ),
+		id: 'toggle-theme',
+		title: 'Toggle Dark Mode',
+		action: () => {
+			document.documentElement.classList.toggle( 'is-dark' );
+		},
 		group: 'Actions',
-		shortcut: '⌘E',
+		shortcut: 'D',
 	},
 ];
 
-function App() {
+export function App() {
 	return (
-		<Commands
-			commands={ commands }
-			onNavigate={ path => {
-				window.location.assign( path );
-			} }
-		/>
+		<Commands commands={ commands } onNavigate={ path => history.pushState( null, '', path ) } />
 	);
 }
 ```
@@ -62,7 +48,7 @@ The palette opens with `Mod+k` by default, which maps to Command on macOS and Co
 
 ## Theming
 
-`@automattic/commands` includes a default theme, so consumers do not need to import a separate stylesheet. The theme uses `cmdk-*` attribute selectors and exposes `--cmdk-*` CSS custom properties for overrides.
+The default theme is bundled with `<Commands />`; consumers do not need to import CSS separately. The theme uses `cmdk-*` attribute selectors and exposes `--cmdk-*` CSS custom properties for overrides.
 
 ```css
 :root {
@@ -78,6 +64,27 @@ The palette opens with `Mod+k` by default, which maps to Command on macOS and Co
 
 The default theme is WPDS-aware, meaning it can use WordPress Design System CSS variables when they are available, without taking a package dependency on WPDS. If those variables are not present, the theme falls back to neutral static values.
 
-### Peer Dependencies
+## Development
 
-This package requires `react` and `react-dom` >= 18 as peer dependencies.
+```bash
+nvm use
+pnpm install
+pnpm test
+pnpm build
+```
+
+| Command             | Description                                                                   |
+| ------------------- | ----------------------------------------------------------------------------- |
+| `pnpm build`        | Build ESM + CJS output to `dist/`                                             |
+| `pnpm dev`          | Start the Vite playground with HMR against `src/` at `http://localhost:5173/` |
+| `pnpm dev:dist`     | Build first, then start the playground against `dist/`                        |
+| `pnpm test`         | Run tests with Vitest and React Testing Library                               |
+| `pnpm test:watch`   | Run tests in watch mode                                                       |
+| `pnpm lint`         | Lint with ESLint                                                              |
+| `pnpm lint:fix`     | Lint and auto-fix                                                             |
+| `pnpm format`       | Format with Prettier                                                          |
+| `pnpm format:check` | Check formatting                                                              |
+
+## License
+
+Licensed under GPL-2.0-or-later. See [LICENSE](./LICENSE).
