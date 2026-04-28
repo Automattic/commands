@@ -10,8 +10,7 @@ import { useRecentCommands } from './hooks/use-recent-commands';
 import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
-import type { ParamSelectionState } from './command-list-content';
-import type { Command, CommandsProps } from './types';
+import type { Command, CommandsProps, ParamSelectionState } from './types';
 import './theme.css';
 
 function SearchIcon() {

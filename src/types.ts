@@ -1,5 +1,26 @@
 import type { ReactNode } from 'react';
 
+export interface UnresolvedParam {
+	/** The param name (e.g. "env") */
+	name: string;
+	/** When the resolver returns an array, these are the options the user can pick from */
+	options?: string[];
+}
+
+export interface ResolveRouteResult {
+	/** The route with resolved params replaced (unresolved ones stay as `:param`) */
+	path: string;
+	/** Params that still need a value, optionally with selectable options */
+	unresolved: UnresolvedParam[];
+}
+
+export interface ParamSelectionState {
+	/** The partially-resolved route path */
+	path: string;
+	/** Queue of params that still need a user selection */
+	pending: UnresolvedParam[];
+}
+
 export interface Command {
 	/** Unique identifier (also used for recency tracking) */
 	id: string;
@@ -80,4 +101,16 @@ export interface CommandsProps {
 
 	/** localStorage key for recent commands. Default: `"@automattic/commands:recent"` */
 	recentStorageKey?: string;
+}
+
+export interface CommandListContentProps {
+	resolving: boolean;
+	paramSelection: ParamSelectionState | null;
+	currentParam: UnresolvedParam | null;
+	emptyState: CommandsProps[ 'emptyState' ];
+	shouldShowRecent: boolean;
+	recentCommands: Command[];
+	grouped: Map< string, Command[] >;
+	onSelect: ( item: Command ) => void;
+	onParamOptionSelect: ( value: string ) => void;
 }

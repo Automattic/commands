@@ -1,30 +1,6 @@
 import { Command as CommandPrimitive } from 'cmdk';
 
-import type { UnresolvedParam } from './resolve-route';
-import type { Command, CommandsProps } from './types';
-
-/* ---------- param-selection sub-layer state ---------- */
-
-export interface ParamSelectionState {
-	/** The partially-resolved route path */
-	path: string;
-	/** Queue of params that still need a user selection */
-	pending: UnresolvedParam[];
-}
-
-/* ---------- List content ---------- */
-
-export interface CommandListContentProps {
-	resolving: boolean;
-	paramSelection: ParamSelectionState | null;
-	currentParam: UnresolvedParam | null;
-	emptyState: CommandsProps[ 'emptyState' ];
-	shouldShowRecent: boolean;
-	recentCommands: Command[];
-	grouped: Map< string, Command[] >;
-	onSelect: ( item: Command ) => void;
-	onParamOptionSelect: ( value: string ) => void;
-}
+import type { Command, CommandListContentProps } from './types';
 
 export function CommandListContent( {
 	resolving,

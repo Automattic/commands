@@ -1,18 +1,4 @@
-import type { CommandsProps } from './types';
-
-export interface UnresolvedParam {
-	/** The param name (e.g. "env") */
-	name: string;
-	/** When the resolver returns an array, these are the options the user can pick from */
-	options?: string[];
-}
-
-export interface ResolveRouteResult {
-	/** The route with resolved params replaced (unresolved ones stay as `:param`) */
-	path: string;
-	/** Params that still need a value, optionally with selectable options */
-	unresolved: UnresolvedParam[];
-}
+import type { CommandsProps, ResolveRouteResult, UnresolvedParam } from './types';
 
 const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)(?=[/?#]|$)/g;
 
