@@ -86,13 +86,13 @@ const commands: Command[] = [
  * in the palette before the sub-layer appears.
  */
 const resolver: CommandsProps[ 'resolver' ] = async params => {
-	const resolved: Record< string, string | string[] > = { ...params };
+	const resolved: Record< string, string | string[] > = {};
 
-	if ( 'appId' in resolved ) {
+	if ( params.includes( 'appId' ) ) {
 		resolved.appId = 'my-cool-app';
 	}
 
-	if ( 'env' in resolved ) {
+	if ( params.includes( 'env' ) ) {
 		await new Promise( resolve => setTimeout( resolve, 800 ) );
 		resolved.env = [ 'production', 'staging', 'development' ];
 	}

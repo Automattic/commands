@@ -41,13 +41,13 @@ export interface CommandsProps {
 
 	/**
 	 * Resolves route variables at runtime.
-	 * Receives the variable map (e.g., `{ id: ":id" }`) and returns resolved values.
+	 * Receives param names (e.g., `["id", "env"]`) and returns resolved values.
 	 * A string value means the param is resolved. An array of strings means the
 	 * palette will show a sub-layer for the user to pick one.
 	 * May be async — the palette shows a loading state while resolving.
 	 */
 	resolver?: (
-		params: Record< string, string >
+		params: string[]
 	) => Record< string, ResolvedParam > | Promise< Record< string, ResolvedParam > >;
 
 	/** Called when a route command is selected with the fully resolved path */

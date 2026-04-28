@@ -41,11 +41,11 @@ export function replaceRouteParam( route: string, name: string, value: string ):
  *
  * 1. Extracts all `:param` patterns from the route.
  * 2. If no params exist, returns the route unchanged.
- * 3. Calls the resolver with a `{ param: ":param" }` map.
+ * 3. Calls the resolver with param names (e.g. `["appId", "env"]`).
  * 4. For each returned value:
  *    - string → replaces the placeholder in the path.
  *    - string[] → listed as unresolved with selectable options.
- *    - missing / echoed back → listed as unresolved without options.
+ *    - missing → listed as unresolved without options.
  */
 export async function resolveRoute(
 	route: string,
@@ -64,13 +64,7 @@ export async function resolveRoute(
 		};
 	}
 
-	const paramMap: Record< string, string > = {};
-	for ( const name of paramNames ) {
-		// eslint-disable-next-line security/detect-object-injection
-		paramMap[ name ] = `:${ name }`;
-	}
-
-	const resolved = await resolver( paramMap );
+	const resolved = await resolver( paramNames );
 
 	let path = route;
 	const unresolved: UnresolvedParam[] = [];
@@ -81,7 +75,7 @@ export async function resolveRoute(
 
 		if ( Array.isArray( value ) ) {
 			unresolved.push( { name, options: value } );
-		} else if ( typeof value === 'string' && value !== `:${ name }` ) {
+		} else if ( typeof value === 'string' ) {
 			path = replaceRouteParam( path, name, value );
 		} else {
 			unresolved.push( { name } );

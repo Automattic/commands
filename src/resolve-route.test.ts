@@ -65,8 +65,8 @@ describe( 'resolveRoute', () => {
 	} );
 
 	it( 'resolves a single param via a sync resolver', async () => {
-		const resolver = ( params: Record< string, string > ) => {
-			expect( params ).toEqual( { appId: ':appId' } );
+		const resolver = ( params: string[] ) => {
+			expect( params ).toEqual( [ 'appId' ] );
 			return { appId: '42' };
 		};
 
@@ -106,16 +106,6 @@ describe( 'resolveRoute', () => {
 		expect( result ).toEqual( {
 			path: '/apps/:appId/:env/logs',
 			unresolved: [ { name: 'appId' }, { name: 'env' } ],
-		} );
-	} );
-
-	it( 'treats a param echoed back unchanged as unresolved', async () => {
-		const resolver = () => ( { appId: ':appId' } );
-
-		const result = await resolveRoute( '/apps/:appId', resolver );
-		expect( result ).toEqual( {
-			path: '/apps/:appId',
-			unresolved: [ { name: 'appId' } ],
 		} );
 	} );
 
