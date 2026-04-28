@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
 import { useRecentCommands } from './hooks/use-recent-commands';
-import { replaceRouteParam, resolveRoute } from './resolve-route';
+import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
 import type { UnresolvedParam } from './resolve-route';
@@ -106,6 +106,11 @@ function Commands( {
 			}
 
 			if ( item.route ) {
+				if ( extractParams( item.route ).length === 0 ) {
+					completeNavigation( item.route );
+					return;
+				}
+
 				const gen = ++resolveGenRef.current;
 				setResolving( true );
 				void resolveRoute( item.route, resolver )
