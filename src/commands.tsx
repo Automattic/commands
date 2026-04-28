@@ -169,7 +169,9 @@ function Commands( {
 			key={ currentParam?.name ?? 'commands' }
 			open={ open }
 			onOpenChange={ handleOpenChange }
-			label={ currentParam ? `Select ${ currentParam.name }` : 'Command palette' }
+			label={
+				currentParam ? `Select ${ currentParam.name }. Backspace to cancel.` : 'Command palette'
+			}
 			filter={ paramSelection ? undefined : filter }
 			loop
 		>
@@ -180,7 +182,9 @@ function Commands( {
 			<div data-cmdk-input-wrapper="">
 				<SearchIcon />
 				<CommandPrimitive.Input
-					placeholder={ currentParam ? `Select ${ currentParam.name }...` : placeholder }
+					placeholder={
+						currentParam ? `Select ${ currentParam.name }. Backspace to cancel.` : placeholder
+					}
 					onKeyDown={ paramSelection ? handleParamKeyDown : undefined }
 				/>
 			</div>
