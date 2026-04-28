@@ -3,7 +3,6 @@ import { Command as CommandPrimitive } from 'cmdk';
 import type { Command, CommandListContentProps } from './types';
 
 const themeAttributes = {
-	loadingContent: { 'cmdk-loading-content': '' },
 	itemIcon: { 'cmdk-item-icon': '' },
 	itemContent: { 'cmdk-item-content': '' },
 	itemTitle: { 'cmdk-item-title': '' },
@@ -24,11 +23,7 @@ export function CommandListContent( {
 	onParamOptionSelect,
 }: CommandListContentProps ) {
 	if ( resolving ) {
-		return (
-			<CommandPrimitive.Loading>
-				<div { ...themeAttributes.loadingContent }>Loading...</div>
-			</CommandPrimitive.Loading>
-		);
+		return <CommandPrimitive.Loading>Loading...</CommandPrimitive.Loading>;
 	}
 
 	if ( ! paramSelection ) {
