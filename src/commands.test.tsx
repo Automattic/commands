@@ -633,7 +633,7 @@ describe( 'Commands', () => {
 			} );
 
 			// Select the option
-			input = screen.getByPlaceholderText( 'Select env...' );
+			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			await waitFor( () => {
@@ -674,7 +674,7 @@ describe( 'Commands', () => {
 			} );
 
 			// Select first option (app-one is selected by default)
-			input = screen.getByPlaceholderText( 'Select appId...' );
+			input = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			// Second param: env options
@@ -684,7 +684,7 @@ describe( 'Commands', () => {
 			} );
 
 			// Select first option (prod is selected by default)
-			input = screen.getByPlaceholderText( 'Select env...' );
+			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			await waitFor( () => {
@@ -727,7 +727,7 @@ describe( 'Commands', () => {
 			} );
 
 			// Backspace on the visually empty param input should exit
-			const paramInput = screen.getByPlaceholderText( 'Select env...' );
+			const paramInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
 			fireEvent.keyDown( paramInput, { key: 'Backspace' } );
 
 			// Should be back to the command list
@@ -790,7 +790,7 @@ describe( 'Commands', () => {
 
 			// Loading indicator visible while resolver is pending
 			await waitFor( () => {
-				expect( screen.getByText( 'Resolving…' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
 			} );
 
 			// Resolve the promise
@@ -798,7 +798,7 @@ describe( 'Commands', () => {
 
 			// Loading indicator disappears
 			await waitFor( () => {
-				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
 			} );
 		} );
 
@@ -828,7 +828,7 @@ describe( 'Commands', () => {
 
 			// Loading state clears after rejection
 			await waitFor( () => {
-				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
 			} );
 
 			// Palette returns to normal command list
@@ -869,7 +869,7 @@ describe( 'Commands', () => {
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			await waitFor( () => {
-				expect( screen.getByText( 'Resolving…' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
 			} );
 
 			// Close the dialog while resolver is pending
@@ -887,7 +887,7 @@ describe( 'Commands', () => {
 
 			await waitFor( () => {
 				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
-				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
 			} );
 			expect( onNavigate ).not.toHaveBeenCalled();
 		} );
@@ -917,7 +917,7 @@ describe( 'Commands', () => {
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			await waitFor( () => {
-				expect( screen.getByText( 'Resolving…' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
 			} );
 
 			// Close the dialog
