@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { extractParams, resolveRoute } from './resolve-route';
+import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
 
 /* ---------- extractParams ---------- */
 
@@ -23,6 +23,36 @@ describe( 'extractParams', () => {
 
 	it( 'returns an empty array for an empty string', () => {
 		expect( extractParams( '' ) ).toEqual( [] );
+	} );
+} );
+
+/* ---------- replaceRouteParam ---------- */
+
+describe( 'replaceRouteParam', () => {
+	it( 'replaces a single param occurrence', () => {
+		expect( replaceRouteParam( '/apps/:appId/logs', 'appId', '42' ) ).toBe( '/apps/42/logs' );
+	} );
+
+	it( 'replaces all occurrences of the same param', () => {
+		expect( replaceRouteParam( '/apps/:appId/compare/:appId', 'appId', '42' ) ).toBe(
+			'/apps/42/compare/42'
+		);
+	} );
+
+	it( 'does not corrupt overlapping param names', () => {
+		expect( replaceRouteParam( '/apps/:app/:appId', 'app', 'myapp' ) ).toBe(
+			'/apps/myapp/:appId'
+		);
+	} );
+
+	it( 'leaves other params untouched', () => {
+		expect( replaceRouteParam( '/apps/:appId/:env', 'env', 'prod' ) ).toBe(
+			'/apps/:appId/prod'
+		);
+	} );
+
+	it( 'handles params at the end of the route', () => {
+		expect( replaceRouteParam( '/apps/:appId', 'appId', '7' ) ).toBe( '/apps/7' );
 	} );
 } );
 
@@ -95,6 +125,16 @@ describe( 'resolveRoute', () => {
 		const result = await resolveRoute( '/apps/:appId', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/:appId',
+			unresolved: [ { name: 'appId' } ],
+		} );
+	} );
+
+	it( 'does not corrupt overlapping param names during resolution', async () => {
+		const resolver = () => ( { app: 'myapp' } );
+
+		const result = await resolveRoute( '/apps/:app/:appId', resolver );
+		expect( result ).toEqual( {
+			path: '/apps/myapp/:appId',
 			unresolved: [ { name: 'appId' } ],
 		} );
 	} );

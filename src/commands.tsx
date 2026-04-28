@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
 import { useRecentCommands } from './hooks/use-recent-commands';
-import { resolveRoute } from './resolve-route';
+import { replaceRouteParam, resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
 import type { UnresolvedParam } from './resolve-route';
@@ -150,7 +150,7 @@ function Commands( {
 				return;
 			}
 			const current = selection.pending[ 0 ];
-			const updatedPath = selection.path.replace( `:${ current.name }`, value );
+			const updatedPath = replaceRouteParam( selection.path, current.name, value );
 			const remaining = selection.pending.slice( 1 );
 
 			if ( remaining.length === 0 ) {

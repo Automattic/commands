@@ -14,7 +14,7 @@ export interface ResolveRouteResult {
 	unresolved: UnresolvedParam[];
 }
 
-const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
+const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)(?=[/?#]|$)/g;
 
 /**
  * Extracts `:param` names from a route string.
@@ -24,6 +24,16 @@ const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)/g;
  */
 export function extractParams( route: string ): string[] {
 	return Array.from( route.matchAll( PARAM_PATTERN ), match => match[ 1 ] );
+}
+
+/**
+ * Replaces a single named route parameter with a value, safely handling
+ * overlapping names (e.g. `:app` vs `:appId`).
+ */
+export function replaceRouteParam( route: string, name: string, value: string ): string {
+	return route.replace( PARAM_PATTERN, ( match, paramName: string ) =>
+		paramName === name ? value : match
+	);
 }
 
 /**
@@ -72,7 +82,7 @@ export async function resolveRoute(
 		if ( Array.isArray( value ) ) {
 			unresolved.push( { name, options: value } );
 		} else if ( typeof value === 'string' && value !== `:${ name }` ) {
-			path = path.split( `:${ name }` ).join( value );
+			path = replaceRouteParam( path, name, value );
 		} else {
 			unresolved.push( { name } );
 		}
