@@ -40,15 +40,11 @@ describe( 'replaceRouteParam', () => {
 	} );
 
 	it( 'does not corrupt overlapping param names', () => {
-		expect( replaceRouteParam( '/apps/:app/:appId', 'app', 'myapp' ) ).toBe(
-			'/apps/myapp/:appId'
-		);
+		expect( replaceRouteParam( '/apps/:app/:appId', 'app', 'myapp' ) ).toBe( '/apps/myapp/:appId' );
 	} );
 
 	it( 'leaves other params untouched', () => {
-		expect( replaceRouteParam( '/apps/:appId/:env', 'env', 'prod' ) ).toBe(
-			'/apps/:appId/prod'
-		);
+		expect( replaceRouteParam( '/apps/:appId/:env', 'env', 'prod' ) ).toBe( '/apps/:appId/prod' );
 	} );
 
 	it( 'handles params at the end of the route', () => {

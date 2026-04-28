@@ -57,8 +57,6 @@ function Commands( {
 		validateCommands( commands );
 	}, [ commands ] );
 
-	useHotkey( triggerKey, () => handleOpenChange( ! open ) );
-
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
 	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
 		limit: recentLimit,
@@ -81,6 +79,8 @@ function Commands( {
 		},
 		[ resetParamSelection ]
 	);
+
+	useHotkey( triggerKey, () => handleOpenChange( ! open ) );
 
 	const completeNavigation = useCallback(
 		( path: string ) => {
@@ -124,6 +124,7 @@ function Commands( {
 						if ( gen !== resolveGenRef.current ) {
 							return;
 						}
+						// eslint-disable-next-line no-console
 						console.error( '[@automattic/commands] Route resolution failed:', error );
 						resetParamSelection();
 					} );

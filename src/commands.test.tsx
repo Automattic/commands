@@ -85,9 +85,7 @@ describe( 'Commands', () => {
 				appId: '42',
 				env: [ 'production', 'staging' ],
 			} );
-			const commands = [
-				cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ),
-			];
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
 
 			render(
 				<Commands
