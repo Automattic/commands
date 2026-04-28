@@ -24,6 +24,10 @@ describe( 'extractParams', () => {
 	it( 'returns an empty array for an empty string', () => {
 		expect( extractParams( '' ) ).toEqual( [] );
 	} );
+
+	it( 'deduplicates repeated param names', () => {
+		expect( extractParams( '/apps/:appId/compare/:appId' ) ).toEqual( [ 'appId' ] );
+	} );
 } );
 
 /* ---------- replaceRouteParam ---------- */

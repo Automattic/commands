@@ -9,7 +9,13 @@ const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)(?=[/?#]|$)/g;
  * Routes with no params return an empty array.
  */
 export function extractParams( route: string ): string[] {
-	return Array.from( route.matchAll( PARAM_PATTERN ), match => match[ 1 ] );
+	const params = new Set< string >();
+
+	for ( const match of route.matchAll( PARAM_PATTERN ) ) {
+		params.add( match[ 1 ] );
+	}
+
+	return Array.from( params );
 }
 
 /**
