@@ -242,28 +242,30 @@ function CommandListContent( {
 	}
 
 	if ( paramSelection ) {
+		if ( ! currentParam?.options ) {
+			return (
+				<CommandPrimitive.Empty>
+					No options available for { currentParam?.name }.
+				</CommandPrimitive.Empty>
+			);
+		}
+
 		return (
 			<>
 				<CommandPrimitive.Empty>No matching options.</CommandPrimitive.Empty>
-				{ currentParam?.options ? (
-					<CommandPrimitive.Group heading={ `Choose ${ currentParam.name }` }>
-						{ currentParam.options.map( option => (
-							<CommandPrimitive.Item
-								key={ option }
-								value={ option }
-								onSelect={ () => onParamOptionSelect( option ) }
-							>
-								<span data-slot="label">
-									<span data-slot="title">{ option }</span>
-								</span>
-							</CommandPrimitive.Item>
-						) ) }
-					</CommandPrimitive.Group>
-				) : (
-					<CommandPrimitive.Empty>
-						No options available for { currentParam?.name }.
-					</CommandPrimitive.Empty>
-				) }
+				<CommandPrimitive.Group heading={ `Choose ${ currentParam.name }` }>
+					{ currentParam.options.map( option => (
+						<CommandPrimitive.Item
+							key={ option }
+							value={ option }
+							onSelect={ () => onParamOptionSelect( option ) }
+						>
+							<span data-slot="label">
+								<span data-slot="title">{ option }</span>
+							</span>
+						</CommandPrimitive.Item>
+					) ) }
+				</CommandPrimitive.Group>
 			</>
 		);
 	}
