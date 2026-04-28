@@ -80,6 +80,49 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'resets param selection when closed via trigger key', async () => {
+			const resolver = () => ( {
+				appId: '42',
+				env: [ 'production', 'staging' ],
+			} );
+			const commands = [
+				cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			// Select the command to enter param selection
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			// Close via trigger key (not Escape or onOpenChange)
+			dispatchKey( 'k', { meta: true } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+
+			// Reopen — should show normal command list, not stale param selection
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'production' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
 		it( 'closes the dialog on Escape', async () => {
 			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" /> );
 

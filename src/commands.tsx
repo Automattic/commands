@@ -71,7 +71,7 @@ function Commands( {
 		validateCommands( commands );
 	}, [ commands ] );
 
-	useHotkey( triggerKey, () => setOpen( ! open ) );
+	useHotkey( triggerKey, () => handleOpenChange( ! open ) );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
 	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
