@@ -37,6 +37,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "release:prepare": "node ./bin/prepare-release.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },
