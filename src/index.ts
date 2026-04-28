@@ -1,2 +1,9 @@
 export { Commands } from './commands';
-export type { Command, CommandsProps } from './types';
+export { resolveRoute, extractParams, replaceRouteParam } from './resolve-route';
+export type {
+	Command,
+	CommandsProps,
+	ResolvedParam,
+	ResolveRouteResult,
+	UnresolvedParam,
+} from './types';

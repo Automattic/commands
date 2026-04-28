@@ -1,14 +1,16 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { Root as VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Command as CommandPrimitive } from 'cmdk';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { CommandListContent } from './command-list-content';
 import { groupCommands } from './group-commands';
 import { useHotkey } from './hooks/use-hotkey';
 import { useRecentCommands } from './hooks/use-recent-commands';
+import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
-import type { Command, CommandsProps } from './types';
+import type { Command, CommandsProps, ParamSelectionState } from './types';
 import './theme.css';
 
 function SearchIcon() {
@@ -35,6 +37,7 @@ function SearchIcon() {
 
 function Commands( {
 	commands,
+	resolver,
 	placeholder = 'Search commands...',
 	filter,
 	emptyState,
@@ -45,11 +48,13 @@ function Commands( {
 	recentStorageKey,
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
+	const [ resolving, setResolving ] = useState( false );
+	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
+	const resolveGenRef = useRef( 0 );
+
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
-
-	useHotkey( triggerKey, () => setOpen( ! open ) );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
 	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
@@ -58,6 +63,33 @@ function Commands( {
 	} );
 	const shouldShowRecent = showRecent && recentCommands.length > 0;
 
+	const resetParamSelection = useCallback( () => {
+		resolveGenRef.current += 1;
+		setResolving( false );
+		setParamSelection( null );
+	}, [] );
+
+	const handleOpenChange = useCallback(
+		( next: boolean ) => {
+			setOpen( next );
+			if ( ! next ) {
+				resetParamSelection();
+			}
+		},
+		[ resetParamSelection ]
+	);
+
+	useHotkey( triggerKey, () => handleOpenChange( ! open ) );
+
+	const completeNavigation = useCallback(
+		( path: string ) => {
+			onNavigate?.( path );
+			setOpen( false );
+			resetParamSelection();
+		},
+		[ onNavigate, resetParamSelection ]
+	);
+
 	const handleSelect = useCallback(
 		( item: Command ) => {
 			if ( showRecent ) {
@@ -65,21 +97,82 @@ function Commands( {
 			}
 
 			if ( item.route ) {
-				onNavigate?.( item.route );
+				if ( extractParams( item.route ).length === 0 ) {
+					completeNavigation( item.route );
+					return;
+				}
+
+				const gen = ++resolveGenRef.current;
+				setResolving( true );
+				void resolveRoute( item.route, resolver )
+					.then( result => {
+						if ( gen !== resolveGenRef.current ) {
+							return;
+						}
+						setResolving( false );
+						if ( result.unresolved.length === 0 ) {
+							completeNavigation( result.path );
+						} else {
+							setParamSelection( {
+								path: result.path,
+								pending: result.unresolved,
+							} );
+						}
+					} )
+					.catch( ( error: unknown ) => {
+						if ( gen !== resolveGenRef.current ) {
+							return;
+						}
+						// eslint-disable-next-line no-console
+						console.error( '[@automattic/commands] Route resolution failed:', error );
+						resetParamSelection();
+					} );
 			} else {
 				item.action?.();
+				setOpen( false );
 			}
-			setOpen( false );
 		},
-		[ addRecent, onNavigate, showRecent ]
+		[ addRecent, completeNavigation, resetParamSelection, resolver, showRecent ]
 	);
+
+	const handleParamOptionSelect = useCallback(
+		( value: string ) => {
+			if ( ! paramSelection ) {
+				return;
+			}
+			const current = paramSelection.pending[ 0 ];
+			const updatedPath = replaceRouteParam( paramSelection.path, current.name, value );
+			const remaining = paramSelection.pending.slice( 1 );
+
+			if ( remaining.length === 0 ) {
+				completeNavigation( updatedPath );
+			} else {
+				setParamSelection( { path: updatedPath, pending: remaining } );
+			}
+		},
+		[ paramSelection, completeNavigation ]
+	);
+
+	const handleParamKeyDown = useCallback(
+		( event: React.KeyboardEvent< HTMLInputElement > ) => {
+			if ( event.key === 'Backspace' && event.currentTarget.value === '' ) {
+				resetParamSelection();
+			}
+		},
+		[ resetParamSelection ]
+	);
+
+	const currentParam = paramSelection?.pending[ 0 ] ?? null;
 
 	return (
 		<CommandPrimitive.Dialog
+			key={ currentParam?.name ?? 'commands' }
 			open={ open }
-			onOpenChange={ setOpen }
-			label="Command palette"
-			filter={ filter }
+			onOpenChange={ handleOpenChange }
+			label={
+				currentParam ? `Select ${ currentParam.name }. Backspace to cancel.` : 'Command palette'
+			}
+			filter={ paramSelection ? undefined : filter }
 			loop
 		>
 			<VisuallyHidden>
@@ -88,71 +181,27 @@ function Commands( {
 			</VisuallyHidden>
 			<div data-cmdk-input-wrapper="">
 				<SearchIcon />
-				<CommandPrimitive.Input placeholder={ placeholder } />
+				<CommandPrimitive.Input
+					placeholder={
+						currentParam ? `Select ${ currentParam.name }. Backspace to cancel.` : placeholder
+					}
+					onKeyDown={ paramSelection ? handleParamKeyDown : undefined }
+				/>
 			</div>
 			<CommandPrimitive.List>
-				<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
-				{ shouldShowRecent && (
-					<CommandPrimitive.Group heading="Recently Used">
-						{ recentCommands.map( item => (
-							<CommandItem
-								key={ item.id }
-								command={ item }
-								value={ `recent:${ item.id }` }
-								onSelect={ () => handleSelect( item ) }
-							/>
-						) ) }
-					</CommandPrimitive.Group>
-				) }
-				{ Array.from( grouped.entries() ).map( ( [ group, items ] ) =>
-					group ? (
-						<CommandPrimitive.Group key={ group } heading={ group }>
-							{ items.map( item => (
-								<CommandItem
-									key={ item.id }
-									command={ item }
-									onSelect={ () => handleSelect( item ) }
-								/>
-							) ) }
-						</CommandPrimitive.Group>
-					) : (
-						items.map( item => (
-							<CommandItem
-								key={ item.id }
-								command={ item }
-								onSelect={ () => handleSelect( item ) }
-							/>
-						) )
-					)
-				) }
+				<CommandListContent
+					resolving={ resolving }
+					paramSelection={ paramSelection }
+					currentParam={ currentParam }
+					emptyState={ emptyState }
+					shouldShowRecent={ shouldShowRecent }
+					recentCommands={ recentCommands }
+					grouped={ grouped }
+					onSelect={ handleSelect }
+					onParamOptionSelect={ handleParamOptionSelect }
+				/>
 			</CommandPrimitive.List>
 		</CommandPrimitive.Dialog>
-	);
-}
-
-interface CommandItemProps {
-	command: Command;
-	value?: string;
-	onSelect: () => void;
-}
-
-function CommandItem( { command, value = command.id, onSelect }: CommandItemProps ) {
-	const typeLabel = command.route ? 'Link' : 'Action';
-	const keywords = [ command.title, ...( command.keywords ?? [] ) ];
-
-	return (
-		<CommandPrimitive.Item value={ value } keywords={ keywords } onSelect={ onSelect }>
-			{ command.icon && <span data-slot="icon">{ command.icon }</span> }
-			<span data-slot="label">
-				<span data-slot="title">{ command.title }</span>
-				{ command.description && <span data-slot="description">{ command.description }</span> }
-			</span>
-			{ command.shortcut ? (
-				<span data-slot="shortcut">{ command.shortcut }</span>
-			) : (
-				<span data-slot="type">{ typeLabel }</span>
-			) }
-		</CommandPrimitive.Item>
 	);
 }
 
