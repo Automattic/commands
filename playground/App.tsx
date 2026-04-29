@@ -81,23 +81,26 @@ const commands: Command[] = [
 ];
 
 /**
- * Sample async resolver that simulates an API call to fetch environment
- * options. The 800ms delay lets you see the "Resolving…" loading state
- * in the palette before the sub-layer appears.
+ * Sample async resolver that resolves params one by one.
+ * The `env` options change based on which `appId` the user selects,
+ * because `selections` carries the previously-picked values.
  */
-const resolver: CommandsProps[ 'resolver' ] = async params => {
-	const resolved: Record< string, string | string[] > = {};
+const envsByApp: Record< string, string[] > = {
+	'my-cool-app': [ 'production', 'staging' ],
+	'my-other-app': [ 'production', 'staging', 'development' ],
+};
 
-	if ( params.includes( 'appId' ) ) {
-		resolved.appId = 'my-cool-app';
+const resolver: CommandsProps[ 'resolver' ] = async ( param, selections ) => {
+	if ( param === 'appId' ) {
+		return [ 'my-cool-app', 'my-other-app' ];
 	}
 
-	if ( params.includes( 'env' ) ) {
+	if ( param === 'env' ) {
 		await new Promise( resolve => setTimeout( resolve, 800 ) );
-		resolved.env = [ 'production', 'staging', 'development' ];
+		return envsByApp[ selections.appId ] ?? [ 'production' ];
 	}
 
-	return resolved;
+	return [];
 };
 
 export function App() {
