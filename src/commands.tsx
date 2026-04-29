@@ -200,6 +200,13 @@ function Commands( {
 	);
 
 	const currentParam = paramSelection?.pending[ 0 ] ?? null;
+	let placeholderText = currentParam
+		? `Select ${ currentParam.name }. Backspace to cancel.`
+		: placeholder;
+
+	if ( resolveError ) {
+		placeholderText = 'Route resolution failed. Backspace to cancel.';
+	}
 
 	return (
 		<CommandPrimitive.Dialog
@@ -219,9 +226,7 @@ function Commands( {
 			<div { ...themeAttributes.inputWrapper }>
 				<SearchIcon />
 				<CommandPrimitive.Input
-					placeholder={
-						currentParam ? `Select ${ currentParam.name }. Backspace to cancel.` : placeholder
-					}
+					placeholder={ placeholderText }
 					onKeyDown={ paramSelection || resolveError ? handleParamKeyDown : undefined }
 				/>
 			</div>
