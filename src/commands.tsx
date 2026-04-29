@@ -13,6 +13,10 @@ import { validateCommands } from './validate-commands';
 import type { Command, CommandsProps, ParamSelectionState } from './types';
 import './theme.css';
 
+const themeAttributes = {
+	inputWrapper: { 'cmdk-input-wrapper': '' },
+} as const;
+
 function SearchIcon() {
 	return (
 		<svg
@@ -179,7 +183,7 @@ function Commands( {
 				<Dialog.Title>Command palette</Dialog.Title>
 				<Dialog.Description>Search and run commands</Dialog.Description>
 			</VisuallyHidden>
-			<div data-cmdk-input-wrapper="">
+			<div { ...themeAttributes.inputWrapper }>
 				<SearchIcon />
 				<CommandPrimitive.Input
 					placeholder={

@@ -2,6 +2,15 @@ import { Command as CommandPrimitive } from 'cmdk';
 
 import type { Command, CommandListContentProps } from './types';
 
+const themeAttributes = {
+	itemIcon: { 'cmdk-item-icon': '' },
+	itemContent: { 'cmdk-item-content': '' },
+	itemTitle: { 'cmdk-item-title': '' },
+	itemDescription: { 'cmdk-item-description': '' },
+	itemShortcut: { 'cmdk-item-shortcut': '' },
+	itemType: { 'cmdk-item-type': '' },
+} as const;
+
 export function CommandListContent( {
 	resolving,
 	paramSelection,
@@ -14,11 +23,7 @@ export function CommandListContent( {
 	onParamOptionSelect,
 }: CommandListContentProps ) {
 	if ( resolving ) {
-		return (
-			<CommandPrimitive.Loading>
-				<div data-cmdk-loading="">Loading...</div>
-			</CommandPrimitive.Loading>
-		);
+		return <CommandPrimitive.Loading>Loading...</CommandPrimitive.Loading>;
 	}
 
 	if ( ! paramSelection ) {
@@ -74,8 +79,8 @@ export function CommandListContent( {
 						value={ option }
 						onSelect={ () => onParamOptionSelect( option ) }
 					>
-						<span data-slot="label">
-							<span data-slot="title">{ option }</span>
+						<span { ...themeAttributes.itemContent }>
+							<span { ...themeAttributes.itemTitle }>{ option }</span>
 						</span>
 					</CommandPrimitive.Item>
 				) ) }
@@ -98,15 +103,21 @@ function CommandItem( { command, value = command.id, onSelect }: CommandItemProp
 
 	return (
 		<CommandPrimitive.Item value={ value } keywords={ keywords } onSelect={ onSelect }>
-			{ command.icon && <span data-slot="icon">{ command.icon }</span> }
-			<span data-slot="label">
-				<span data-slot="title">{ command.title }</span>
-				{ command.description && <span data-slot="description">{ command.description }</span> }
+			{ command.icon && (
+				<span { ...themeAttributes.itemIcon } aria-hidden="true">
+					{ command.icon }
+				</span>
+			) }
+			<span { ...themeAttributes.itemContent }>
+				<span { ...themeAttributes.itemTitle }>{ command.title }</span>
+				{ command.description && (
+					<span { ...themeAttributes.itemDescription }>{ command.description }</span>
+				) }
 			</span>
 			{ command.shortcut ? (
-				<span data-slot="shortcut">{ command.shortcut }</span>
+				<span { ...themeAttributes.itemShortcut }>{ command.shortcut }</span>
 			) : (
-				<span data-slot="type">{ typeLabel }</span>
+				<span { ...themeAttributes.itemType }>{ typeLabel }</span>
 			) }
 		</CommandPrimitive.Item>
 	);
