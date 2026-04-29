@@ -9,9 +9,8 @@ const themeAttributes = {
 	itemDescription: { 'cmdk-item-description': '' },
 	itemShortcut: { 'cmdk-item-shortcut': '' },
 	itemType: { 'cmdk-item-type': '' },
+	error: { 'cmdk-error': '' },
 } as const;
-
-const themeAttributesError = { 'cmdk-error': '' } as const;
 
 export function CommandListContent( {
 	resolving,
@@ -31,7 +30,7 @@ export function CommandListContent( {
 
 	if ( resolveError ) {
 		return (
-			<div { ...themeAttributesError } role="alert">
+			<div { ...themeAttributes.error } role="alert">
 				{ resolveError }
 			</div>
 		);
