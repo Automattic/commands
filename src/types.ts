@@ -12,6 +12,8 @@ export interface ResolveRouteResult {
 	path: string;
 	/** Params that still need a value, optionally with selectable options */
 	unresolved: UnresolvedParam[];
+	/** Accumulated param values resolved so far (includes both auto-resolved and user-selected) */
+	selections: Record< string, string >;
 }
 
 export interface ParamSelectionState {
@@ -19,6 +21,8 @@ export interface ParamSelectionState {
 	path: string;
 	/** Queue of params that still need a user selection */
 	pending: UnresolvedParam[];
+	/** Accumulated user selections so far (param name → selected value) */
+	selections: Record< string, string >;
 }
 
 export interface Command {
@@ -61,15 +65,20 @@ export interface CommandsProps {
 	commands: Command[];
 
 	/**
-	 * Resolves route variables at runtime.
-	 * Receives param names (e.g., `["id", "env"]`) and returns resolved values.
-	 * A string value means the param is resolved. An array of strings means the
-	 * palette will show a sub-layer for the user to pick one.
-	 * May be async — the palette shows a loading state while resolving.
+	 * Resolves a single route variable at runtime.
+	 * Called once per `:param` in left-to-right order. Receives the param name
+	 * and a record of already-resolved values (both auto-resolved strings and
+	 * user-selected values from earlier params).
+	 *
+	 * Return a string to auto-fill the param (the palette moves to the next
+	 * param immediately). Return an array of strings to show a sub-layer where
+	 * the user picks one. The resolver is called for the next param only after
+	 * the current one is resolved.
 	 */
 	resolver?: (
-		params: string[]
-	) => Record< string, ResolvedParam > | Promise< Record< string, ResolvedParam > >;
+		param: string,
+		selections: Record< string, string >
+	) => ResolvedParam | Promise< ResolvedParam >;
 
 	/** Called when a route command is selected with the fully resolved path */
 	onNavigate?: ( path: string ) => void;
