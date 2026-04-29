@@ -84,15 +84,27 @@ const commands: Command[] = [
  * Sample async resolver that resolves params one by one.
  * The `env` options change based on which `appId` the user selects,
  * because `selections` carries the previously-picked values.
+ *
+ * Selecting "non-existent-app" demonstrates the error path —
+ * the resolver throws and the palette resets to the command list.
  */
+const envsByApp: Record< string, string[] > = {
+	'my-cool-app': [ 'production', 'staging' ],
+	'my-other-app': [ 'production', 'staging', 'development' ],
+};
+
 const resolver: CommandsProps[ 'resolver' ] = async ( param, selections ) => {
 	if ( param === 'appId' ) {
-		return [ 'my-cool-app', 'my-other-app' ];
+		return [ 'my-cool-app', 'my-other-app', 'non-existent-app' ];
 	}
 
 	if ( param === 'env' ) {
 		await new Promise( resolve => setTimeout( resolve, 800 ) );
-		return selections.appId === 'my-cool-app' ? [ 'production', 'staging' ] : 'production';
+		const envs = envsByApp[ selections.appId ];
+		if ( ! envs ) {
+			throw new Error( 'Cannot load env' );
+		}
+		return envs;
 	}
 
 	return [];
