@@ -7,7 +7,7 @@ Pass a flat `Command[]` array and get a themed palette with fuzzy search, route 
 ## Install
 
 ```bash
-pnpm add @automattic/commands
+npm install @automattic/commands
 ```
 
 Peer dependencies: `react` and `react-dom` >= 18.
@@ -22,14 +22,19 @@ const commands: Command[] = [
 	{
 		id: 'dashboard',
 		title: 'Dashboard',
+		description: 'Go to dashboard',
 		route: '/dashboard',
 		group: 'Pages',
+		keywords: [ 'home', 'overview' ],
 	},
 	{
-		id: 'logout',
-		title: 'Log out',
-		action: () => signOut(),
+		id: 'toggle-theme',
+		title: 'Toggle Dark Mode',
+		action: () => {
+			document.documentElement.classList.toggle( 'is-dark' );
+		},
 		group: 'Actions',
+		shortcut: 'D',
 	},
 ];
 
