@@ -251,7 +251,7 @@ describe( 'Commands', () => {
 			await openPaletteAndWait();
 
 			const dialog = screen.getByRole( 'dialog', { name: 'Command palette' } );
-			const input = within( dialog ).getByRole( 'combobox' );
+			const input = within( dialog ).getByRole( 'combobox', { name: 'Search commands' } );
 			const list = within( dialog ).getByRole( 'listbox', { name: 'Suggestions' } );
 
 			expect( input ).toHaveAttribute( 'aria-label', 'Search commands' );
@@ -777,6 +777,7 @@ describe( 'Commands', () => {
 
 			const paramInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
 			expect( paramInput ).toHaveAttribute( 'aria-label', 'Select env' );
+			expect( screen.getByRole( 'combobox', { name: 'Select env' } ) ).toBe( paramInput );
 			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '2 options found.' );
 			expect( screen.getByRole( 'group', { name: 'Choose env' } ) ).toBeInTheDocument();
 		} );

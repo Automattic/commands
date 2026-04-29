@@ -329,7 +329,7 @@ function Commands( {
 			key={ currentParam?.name ?? 'commands' }
 			open={ open }
 			onOpenChange={ handleOpenChange }
-			label="Command palette"
+			label={ inputLabel }
 			filter={ paramSelection ? undefined : filter }
 			loop
 		>
