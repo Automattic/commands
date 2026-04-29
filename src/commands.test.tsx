@@ -83,10 +83,12 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'resets param selection when closed via trigger key', async () => {
-			const resolver = () => ( {
-				appId: '42',
-				env: [ 'production', 'staging' ],
-			} );
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return '42';
+				}
+				return [ 'production', 'staging' ];
+			};
 			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
 
 			render(
@@ -537,7 +539,7 @@ describe( 'Commands', () => {
 	describe( 'route resolution', () => {
 		it( 'navigates to a resolved route when all params are resolved', async () => {
 			const onNavigate = vi.fn();
-			const resolver = () => ( { appId: '42' } );
+			const resolver = () => '42';
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
 			render(
@@ -583,7 +585,7 @@ describe( 'Commands', () => {
 
 		it( 'works with an async resolver', async () => {
 			const onNavigate = vi.fn();
-			const resolver = () => Promise.resolve( { id: '7' } );
+			const resolver = () => Promise.resolve( '7' );
 			const commands = [ cmd( { id: 'detail', title: 'Detail', route: '/items/:id' } ) ];
 
 			render(
@@ -614,10 +616,12 @@ describe( 'Commands', () => {
 	describe( 'param selection sub-layer', () => {
 		it( 'shows options when resolver returns an array for a param', async () => {
 			const onNavigate = vi.fn();
-			const resolver = () => ( {
-				appId: '42',
-				env: [ 'production', 'staging' ],
-			} );
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return '42';
+				}
+				return [ 'production', 'staging' ];
+			};
 			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
 
 			render(
@@ -648,10 +652,12 @@ describe( 'Commands', () => {
 
 		it( 'navigates after selecting an option', async () => {
 			const onNavigate = vi.fn();
-			const resolver = () => ( {
-				appId: '42',
-				env: [ 'production', 'staging' ],
-			} );
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return '42';
+				}
+				return [ 'production', 'staging' ];
+			};
 			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
 
 			render(
@@ -688,10 +694,12 @@ describe( 'Commands', () => {
 
 		it( 'steps through multiple unresolved params sequentially', async () => {
 			const onNavigate = vi.fn();
-			const resolver = () => ( {
-				appId: [ 'app-one', 'app-two' ],
-				env: [ 'prod', 'dev' ],
-			} );
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ 'app-one', 'app-two' ];
+				}
+				return [ 'prod', 'dev' ];
+			};
 			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
 
 			render(
@@ -738,10 +746,12 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'exits param selection on Backspace even after prior command search', async () => {
-			const resolver = () => ( {
-				appId: '42',
-				env: [ 'production', 'staging' ],
-			} );
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return '42';
+				}
+				return [ 'production', 'staging' ];
+			};
 			const commands = [
 				cmd( { id: 'audit', title: 'Audit Log', route: '/apps/:appId/:env/audit' } ),
 				cmd( { id: 'dashboard', title: 'Dashboard', route: '/dashboard' } ),
@@ -782,9 +792,68 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 're-resolves remaining params with selections after each pick', async () => {
+			const onNavigate = vi.fn();
+			const resolver = vi
+				.fn()
+				.mockImplementation( ( param: string, selections: Record< string, string > ) => {
+					if ( param === 'appId' ) {
+						return [ 'app-one', 'app-two' ];
+					}
+					if ( selections.appId === 'app-one' ) {
+						return [ 'prod', 'staging' ];
+					}
+					return [ 'dev', 'canary' ];
+				} );
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			await openPaletteAndWait();
+
+			// Select the command
+			let input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// First param: appId options
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+			} );
+
+			// First call: resolver received 'appId' with empty selections
+			expect( resolver ).toHaveBeenCalledWith( 'appId', {} );
+
+			// Select app-one
+			input = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Second param: env options (dependent on appId selection)
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'staging' ) ).toBeInTheDocument();
+			} );
+
+			// Second call: resolver received 'env' with appId selection
+			expect( resolver ).toHaveBeenCalledWith( 'env', { appId: 'app-one' } );
+
+			// Select prod
+			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/app-one/prod/audit' );
+			} );
+		} );
+
 		it( 'shows the sub-layer when params are unresolved without options', async () => {
 			const onNavigate = vi.fn();
-			const resolver = () => ( {} );
+			const resolver = () => [];
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
 			render(
@@ -816,9 +885,9 @@ describe( 'Commands', () => {
 
 	describe( 'loading state', () => {
 		it( 'shows a loading indicator while the resolver is running', async () => {
-			let finish: ( value: Record< string, string > ) => void = () => {};
+			let finish: ( value: string ) => void = () => {};
 			const resolver = () =>
-				new Promise< Record< string, string > >( resolve => {
+				new Promise< string >( resolve => {
 					finish = resolve;
 				} );
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
@@ -839,7 +908,7 @@ describe( 'Commands', () => {
 			} );
 
 			// Resolve the promise
-			finish( { appId: '42' } );
+			finish( '42' );
 
 			// Loading indicator disappears
 			await waitFor( () => {
@@ -850,7 +919,7 @@ describe( 'Commands', () => {
 		it( 'clears loading state and logs when the resolver rejects', async () => {
 			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
 			const onNavigate = vi.fn();
-			const resolver = () => Promise.reject( new Error( 'boom' ) );
+			const resolver = (): Promise< string > => Promise.reject( new Error( 'boom' ) );
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
 			render(
@@ -888,9 +957,9 @@ describe( 'Commands', () => {
 
 		it( 'ignores stale resolver results after dialog close and reopen', async () => {
 			const onNavigate = vi.fn();
-			let finish: ( value: Record< string, string > ) => void = () => {};
+			let finish: ( value: string ) => void = () => {};
 			const resolver = () =>
-				new Promise< Record< string, string > >( resolve => {
+				new Promise< string >( resolve => {
 					finish = resolve;
 				} );
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
@@ -925,7 +994,7 @@ describe( 'Commands', () => {
 			} );
 
 			// Stale resolver finishes — should be ignored
-			finish( { appId: '42' } );
+			finish( '42' );
 
 			// Reopen — should show the normal command list, not navigate
 			openPalette();
@@ -939,7 +1008,7 @@ describe( 'Commands', () => {
 
 		it( 'clears loading state when dialog is closed during resolution', async () => {
 			const resolver = () =>
-				new Promise< Record< string, string > >( () => {
+				new Promise< string >( () => {
 					/* never resolves */
 				} );
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];

@@ -108,7 +108,7 @@ function Commands( {
 
 				const gen = ++resolveGenRef.current;
 				setResolving( true );
-				void resolveRoute( item.route, resolver )
+				void resolveRoute( item.route, resolver, {} )
 					.then( result => {
 						if ( gen !== resolveGenRef.current ) {
 							return;
@@ -120,6 +120,7 @@ function Commands( {
 							setParamSelection( {
 								path: result.path,
 								pending: result.unresolved,
+								selections: result.selections,
 							} );
 						}
 					} )
@@ -147,14 +148,42 @@ function Commands( {
 			const current = paramSelection.pending[ 0 ];
 			const updatedPath = replaceRouteParam( paramSelection.path, current.name, value );
 			const remaining = paramSelection.pending.slice( 1 );
+			const updatedSelections = { ...paramSelection.selections, [ current.name ]: value };
 
 			if ( remaining.length === 0 ) {
 				completeNavigation( updatedPath );
-			} else {
-				setParamSelection( { path: updatedPath, pending: remaining } );
+				return;
 			}
+
+			// Re-resolve remaining params so dependent options can update.
+			const gen = ++resolveGenRef.current;
+			setResolving( true );
+			void resolveRoute( updatedPath, resolver, updatedSelections )
+				.then( result => {
+					if ( gen !== resolveGenRef.current ) {
+						return;
+					}
+					setResolving( false );
+					if ( result.unresolved.length === 0 ) {
+						completeNavigation( result.path );
+					} else {
+						setParamSelection( {
+							path: result.path,
+							pending: result.unresolved,
+							selections: result.selections,
+						} );
+					}
+				} )
+				.catch( ( error: unknown ) => {
+					if ( gen !== resolveGenRef.current ) {
+						return;
+					}
+					// eslint-disable-next-line no-console
+					console.error( '[@automattic/commands] Route resolution failed:', error );
+					resetParamSelection();
+				} );
 		},
-		[ paramSelection, completeNavigation ]
+		[ paramSelection, completeNavigation, resolver, resetParamSelection ]
 	);
 
 	const handleParamKeyDown = useCallback(
