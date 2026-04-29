@@ -81,7 +81,7 @@
 	max-height: var( --cmdk-max-height, 360px );
 	overflow-y: auto;
 	overscroll-behavior: contain;
-	padding: var( --cmdk-list-padding, 8px );
+	padding: var( --cmdk-list-padding, 4px );
 	scroll-padding-block: var( --cmdk-list-padding, 8px );
 }
 
@@ -114,8 +114,8 @@
 
 [cmdk-item][data-selected='true'] {
 	background: var( --cmdk-item-selected-bg, var( --wpds-color-bg-surface-neutral-weak, #f6f7f7 ) );
-	box-shadow: inset var( --cmdk-item-selected-indicator-width, 3px ) 0 0
-		var( --cmdk-item-selected-indicator, var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) ) );
+	border-left: 3px solid var( --cmdk-item-selected-indicator, var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) ) );
+	margin-left: -3px;
 	color: var( --cmdk-item-selected-text, var( --wpds-color-fg-content-neutral, #1e1e1e ) );
 }
 
