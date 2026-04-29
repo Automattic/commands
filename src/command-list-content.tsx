@@ -1,4 +1,4 @@
-import { Command as CommandPrimitive } from 'cmdk';
+import { Command as CommandPrimitive, useCommandState } from 'cmdk';
 
 import type { Command, CommandListContentProps } from './types';
 
@@ -16,12 +16,15 @@ export function CommandListContent( {
 	paramSelection,
 	currentParam,
 	emptyState,
-	shouldShowRecent,
+	showRecent,
 	recentCommands,
 	grouped,
 	onSelect,
 	onParamOptionSelect,
 }: CommandListContentProps ) {
+	const search = useCommandState( state => state.search );
+	const shouldShowRecent = showRecent && search === '' && recentCommands.length > 0;
+
 	if ( resolving ) {
 		return <CommandPrimitive.Loading>Loading...</CommandPrimitive.Loading>;
 	}

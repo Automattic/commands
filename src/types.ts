@@ -108,7 +108,7 @@ export interface CommandListContentProps {
 	paramSelection: ParamSelectionState | null;
 	currentParam: UnresolvedParam | null;
 	emptyState: CommandsProps[ 'emptyState' ];
-	shouldShowRecent: boolean;
+	showRecent: boolean;
 	recentCommands: Command[];
 	grouped: Map< string, Command[] >;
 	onSelect: ( item: Command ) => void;

@@ -65,7 +65,6 @@ function Commands( {
 		limit: recentLimit,
 		storageKey: recentStorageKey,
 	} );
-	const shouldShowRecent = showRecent && recentCommands.length > 0;
 
 	const resetParamSelection = useCallback( () => {
 		resolveGenRef.current += 1;
@@ -198,7 +197,7 @@ function Commands( {
 					paramSelection={ paramSelection }
 					currentParam={ currentParam }
 					emptyState={ emptyState }
-					shouldShowRecent={ shouldShowRecent }
+					showRecent={ showRecent }
 					recentCommands={ recentCommands }
 					grouped={ grouped }
 					onSelect={ handleSelect }
