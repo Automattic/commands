@@ -11,8 +11,11 @@ const themeAttributes = {
 	itemType: { 'cmdk-item-type': '' },
 } as const;
 
+const themeAttributesError = { 'cmdk-error': '' } as const;
+
 export function CommandListContent( {
 	resolving,
+	resolveError,
 	paramSelection,
 	currentParam,
 	emptyState,
@@ -24,6 +27,14 @@ export function CommandListContent( {
 }: CommandListContentProps ) {
 	if ( resolving ) {
 		return <CommandPrimitive.Loading>Loading...</CommandPrimitive.Loading>;
+	}
+
+	if ( resolveError ) {
+		return (
+			<div { ...themeAttributesError } role="alert">
+				{ resolveError }
+			</div>
+		);
 	}
 
 	if ( ! paramSelection ) {

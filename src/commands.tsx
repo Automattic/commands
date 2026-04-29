@@ -53,6 +53,7 @@ function Commands( {
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
 	const [ resolving, setResolving ] = useState( false );
+	const [ resolveError, setResolveError ] = useState< string | null >( null );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
 	const resolveGenRef = useRef( 0 );
 
@@ -70,6 +71,7 @@ function Commands( {
 	const resetParamSelection = useCallback( () => {
 		resolveGenRef.current += 1;
 		setResolving( false );
+		setResolveError( null );
 		setParamSelection( null );
 	}, [] );
 
@@ -130,14 +132,15 @@ function Commands( {
 						}
 						// eslint-disable-next-line no-console
 						console.error( '[@automattic/commands] Route resolution failed:', error );
-						resetParamSelection();
+						setResolving( false );
+						setResolveError( error instanceof Error ? error.message : 'Route resolution failed' );
 					} );
 			} else {
 				item.action?.();
 				setOpen( false );
 			}
 		},
-		[ addRecent, completeNavigation, resetParamSelection, resolver, showRecent ]
+		[ addRecent, completeNavigation, resolver, showRecent ]
 	);
 
 	const handleParamOptionSelect = useCallback(
@@ -180,10 +183,11 @@ function Commands( {
 					}
 					// eslint-disable-next-line no-console
 					console.error( '[@automattic/commands] Route resolution failed:', error );
-					resetParamSelection();
+					setResolving( false );
+					setResolveError( error instanceof Error ? error.message : 'Route resolution failed' );
 				} );
 		},
-		[ paramSelection, completeNavigation, resolver, resetParamSelection ]
+		[ paramSelection, completeNavigation, resolver ]
 	);
 
 	const handleParamKeyDown = useCallback(
@@ -218,12 +222,13 @@ function Commands( {
 					placeholder={
 						currentParam ? `Select ${ currentParam.name }. Backspace to cancel.` : placeholder
 					}
-					onKeyDown={ paramSelection ? handleParamKeyDown : undefined }
+					onKeyDown={ paramSelection || resolveError ? handleParamKeyDown : undefined }
 				/>
 			</div>
 			<CommandPrimitive.List>
 				<CommandListContent
 					resolving={ resolving }
+					resolveError={ resolveError }
 					paramSelection={ paramSelection }
 					currentParam={ currentParam }
 					emptyState={ emptyState }

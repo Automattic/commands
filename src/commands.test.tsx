@@ -916,7 +916,7 @@ describe( 'Commands', () => {
 			} );
 		} );
 
-		it( 'clears loading state and logs when the resolver rejects', async () => {
+		it( 'displays the error message when the resolver rejects', async () => {
 			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
 			const onNavigate = vi.fn();
 			const resolver = (): Promise< string > => Promise.reject( new Error( 'boom' ) );
@@ -940,18 +940,92 @@ describe( 'Commands', () => {
 			const input = screen.getByPlaceholderText( 'Search commands...' );
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
-			// Loading state clears after rejection
+			// Error message is displayed in the palette
 			await waitFor( () => {
-				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+				expect( screen.getByRole( 'alert' ) ).toHaveTextContent( 'boom' );
 			} );
 
-			// Palette returns to normal command list
-			expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
 			expect( onNavigate ).not.toHaveBeenCalled();
 			expect( errorSpy ).toHaveBeenCalledWith(
 				'[@automattic/commands] Route resolution failed:',
 				expect.any( Error )
 			);
+			errorSpy.mockRestore();
+		} );
+
+		it( 'clears the error on Backspace and returns to the command list', async () => {
+			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+			const resolver = (): Promise< string > => Promise.reject( new Error( 'oops' ) );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByRole( 'alert' ) ).toBeInTheDocument();
+			} );
+
+			// Backspace dismisses the error
+			fireEvent.keyDown( input, { key: 'Backspace' } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'alert' ) ).not.toBeInTheDocument();
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+			errorSpy.mockRestore();
+		} );
+
+		it( 'shows the error when a dependent param resolver rejects', async () => {
+			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+			const onNavigate = vi.fn();
+			const resolver = ( param: string ): Promise< string | string[] > | string[] => {
+				if ( param === 'appId' ) {
+					return [ 'good-app', 'bad-app' ];
+				}
+				return Promise.reject( new Error( 'Cannot load env' ) );
+			};
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			// Select the command
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Wait for appId options
+			await waitFor( () => {
+				expect( screen.getByText( 'bad-app' ) ).toBeInTheDocument();
+			} );
+
+			// Click bad-app (not Enter, which would select the first item)
+			fireEvent.click( screen.getByText( 'bad-app' ) );
+
+			// Error from dependent env resolver is shown
+			await waitFor( () => {
+				expect( screen.getByRole( 'alert' ) ).toHaveTextContent( 'Cannot load env' );
+			} );
+
+			expect( onNavigate ).not.toHaveBeenCalled();
 			errorSpy.mockRestore();
 		} );
 
@@ -1141,6 +1215,7 @@ describe( 'theme CSS contract', () => {
 			'[cmdk-item-type]',
 			'[cmdk-empty]',
 			'[cmdk-loading]',
+			'[cmdk-error]',
 		];
 
 		for ( const selector of requiredSelectors ) {
