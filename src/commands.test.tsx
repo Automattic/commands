@@ -139,6 +139,32 @@ describe( 'Commands', () => {
 				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
 			} );
 		} );
+
+		it( 'restores previous focus when closed', async () => {
+			render(
+				<>
+					<button>Before palette</button>
+					<Commands commands={ mixedCommands } triggerKey="Meta+k" />
+				</>
+			);
+
+			const previousFocus = screen.getByRole( 'button', { name: 'Before palette' } );
+			previousFocus.focus();
+
+			openPalette();
+
+			const dialog = await screen.findByRole( 'dialog' );
+			await waitFor( () => {
+				expect( dialog ).toContainElement( document.activeElement as HTMLElement );
+			} );
+
+			fireEvent.keyDown( dialog, { key: 'Escape' } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+			expect( previousFocus ).toHaveFocus();
+		} );
 	} );
 
 	/* --- rendering --- */
@@ -218,6 +244,51 @@ describe( 'Commands', () => {
 				'Uses theme hooks'
 			);
 			expect( item.querySelector( '[cmdk-item-shortcut]' ) ).toHaveTextContent( '⌘T' );
+		} );
+
+		it( 'renders accessible dialog, input, list, groups, and options', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+
+			const dialog = screen.getByRole( 'dialog', { name: 'Command palette' } );
+			const input = within( dialog ).getByRole( 'combobox' );
+			const list = within( dialog ).getByRole( 'listbox', { name: 'Suggestions' } );
+
+			expect( input ).toHaveAttribute( 'aria-label', 'Search commands' );
+			expect( input ).toHaveAttribute( 'aria-autocomplete', 'list' );
+			expect( input ).toHaveAttribute( 'aria-expanded', 'true' );
+			expect( input ).toHaveAttribute( 'aria-controls', list.id );
+			expect( list ).not.toHaveAttribute( 'aria-busy' );
+			const options = within( list ).getAllByRole( 'option' );
+			expect( options ).toHaveLength( 4 );
+			expect( options[ 0 ] ).toHaveAttribute( 'aria-selected', 'true' );
+			expect( within( list ).getByRole( 'group', { name: 'Pages' } ) ).toBeInTheDocument();
+			expect( within( list ).getByRole( 'group', { name: 'Actions' } ) ).toBeInTheDocument();
+		} );
+
+		it( 'announces filtered command result counts to assistive technology', async () => {
+			const commands = [
+				cmd( { id: 'a', title: 'Alpha' } ),
+				cmd( { id: 'b', title: 'Beta' } ),
+				cmd( { id: 'c', title: 'Gamma' } ),
+			];
+			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+
+			const status = screen.getByRole( 'status' );
+			expect( status ).toHaveAttribute( 'aria-live', 'polite' );
+			expect( status ).toHaveAttribute( 'aria-atomic', 'true' );
+			expect( status ).toHaveTextContent( '3 commands found.' );
+
+			typeSearch( 'Alpha' );
+			await waitFor( () => {
+				expect( status ).toHaveTextContent( '1 command found.' );
+			} );
+
+			typeSearch( 'Nothing matches this' );
+			await waitFor( () => {
+				expect( status ).toHaveTextContent( 'No commands found.' );
+			} );
 		} );
 
 		it( 'renders the type label with a cmdk attribute hook', async () => {
@@ -530,6 +601,24 @@ describe( 'Commands', () => {
 				const secondItem = screen.getByText( 'Beta' ).closest( '[cmdk-item]' );
 				expect( secondItem ).toHaveAttribute( 'aria-selected', 'true' );
 			} );
+
+			// Arrow up returns to the first item, then wraps to the last item.
+			fireEvent.keyDown( input, { key: 'ArrowUp' } );
+			await waitFor( () => {
+				expect( firstItem ).toHaveAttribute( 'aria-selected', 'true' );
+			} );
+
+			fireEvent.keyDown( input, { key: 'ArrowUp' } );
+			await waitFor( () => {
+				const lastItem = screen.getByText( 'Gamma' ).closest( '[cmdk-item]' );
+				expect( lastItem ).toHaveAttribute( 'aria-selected', 'true' );
+			} );
+
+			// Arrow down wraps from the last item back to the first item.
+			fireEvent.keyDown( input, { key: 'ArrowDown' } );
+			await waitFor( () => {
+				expect( firstItem ).toHaveAttribute( 'aria-selected', 'true' );
+			} );
 		} );
 
 		it( 'selects item on Enter and closes dialog', async () => {
@@ -664,6 +753,32 @@ describe( 'Commands', () => {
 				expect( screen.getByText( 'staging' ) ).toBeInTheDocument();
 			} );
 			expect( onNavigate ).not.toHaveBeenCalled();
+		} );
+
+		it( 'labels param selection input and announces option counts', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return '42';
+				}
+
+				return [ 'production', 'staging' ];
+			};
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render( <Commands commands={ commands } triggerKey="Meta+k" resolver={ resolver } /> );
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			const paramInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			expect( paramInput ).toHaveAttribute( 'aria-label', 'Select env' );
+			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '2 options found.' );
+			expect( screen.getByRole( 'group', { name: 'Choose env' } ) ).toBeInTheDocument();
 		} );
 
 		it( 'navigates after selecting an option', async () => {
@@ -1075,6 +1190,12 @@ describe( 'Commands', () => {
 			await waitFor( () => {
 				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
 			} );
+			expect( screen.getByRole( 'listbox', { name: 'Suggestions' } ) ).toHaveAttribute(
+				'aria-busy',
+				'true'
+			);
+			expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
+			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
 
 			// Resolve the promise
 			finish( '42' );
