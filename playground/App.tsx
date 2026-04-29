@@ -85,11 +85,6 @@ const commands: Command[] = [
  * The `env` options change based on which `appId` the user selects,
  * because `selections` carries the previously-picked values.
  */
-const envsByApp: Record< string, string[] > = {
-	'my-cool-app': [ 'production', 'staging' ],
-	'my-other-app': [ 'production', 'staging', 'development' ],
-};
-
 const resolver: CommandsProps[ 'resolver' ] = async ( param, selections ) => {
 	if ( param === 'appId' ) {
 		return [ 'my-cool-app', 'my-other-app' ];
@@ -97,7 +92,7 @@ const resolver: CommandsProps[ 'resolver' ] = async ( param, selections ) => {
 
 	if ( param === 'env' ) {
 		await new Promise( resolve => setTimeout( resolve, 800 ) );
-		return envsByApp[ selections.appId ] ?? [ 'production' ];
+		return selections.appId === 'my-cool-app' ? [ 'production', 'staging' ] : 'production';
 	}
 
 	return [];
