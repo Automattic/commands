@@ -96,9 +96,19 @@ function Commands( {
 		const previousFocus = previousFocusRef.current;
 		previousFocusRef.current = null;
 
-		if ( previousFocus?.isConnected ) {
-			window.setTimeout( () => previousFocus.focus(), 0 );
+		if ( ! previousFocus?.isConnected ) {
+			return;
 		}
+
+		const timeoutId = window.setTimeout( () => {
+			if ( previousFocus.isConnected ) {
+				previousFocus.focus();
+			}
+		}, 0 );
+
+		return () => {
+			window.clearTimeout( timeoutId );
+		};
 	}, [ open ] );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );

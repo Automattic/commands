@@ -163,7 +163,9 @@ describe( 'Commands', () => {
 			await waitFor( () => {
 				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
 			} );
-			expect( previousFocus ).toHaveFocus();
+			await waitFor( () => {
+				expect( previousFocus ).toHaveFocus();
+			} );
 		} );
 	} );
 
