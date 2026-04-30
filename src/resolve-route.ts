@@ -67,9 +67,7 @@ export async function resolveRoute(
 	let path = route;
 	const accumulated = { ...selections };
 
-	for ( let idx = 0; idx < paramNames.length; idx++ ) {
-		// eslint-disable-next-line security/detect-object-injection
-		const name = paramNames[ idx ];
+	for ( const [ idx, name ] of paramNames.entries() ) {
 		// eslint-disable-next-line no-await-in-loop -- sequential resolution is intentional
 		const value = await resolver( name, accumulated );
 
