@@ -1,3 +1,5 @@
+import { warnInNonProduction } from './utils/logging';
+
 import type { CommandsProps, ResolveRouteResult } from './types';
 
 const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)(?=[/?#]|$)/g;
@@ -40,6 +42,8 @@ export function replaceRouteParam( route: string, name: string, value: string ):
  *    - string → replaces the placeholder in the path and continues.
  *    - string[] → stops and lists that param as unresolved with options,
  *      plus any remaining params as unresolved without options.
+ *    - anything else → stops and lists that param plus remaining params as
+ *      unresolved without options.
  */
 export async function resolveRoute(
 	route: string,
@@ -78,6 +82,17 @@ export async function resolveRoute(
 			return {
 				path,
 				unresolved: [ { name, options: value }, ...remaining ],
+				selections: accumulated,
+			};
+		} else {
+			warnInNonProduction(
+				`[@automattic/commands] Resolver returned an unsupported value for ":${ name }".`,
+				value
+			);
+			const remaining = paramNames.slice( idx + 1 ).map( rest => ( { name: rest } ) );
+			return {
+				path,
+				unresolved: [ { name }, ...remaining ],
 				selections: accumulated,
 			};
 		}

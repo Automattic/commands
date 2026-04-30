@@ -1,6 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 
 import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
+
+import type { ResolvedParam } from './types';
+
+afterEach( () => {
+	vi.restoreAllMocks();
+} );
 
 /* ---------- extractParams ---------- */
 
@@ -103,6 +109,36 @@ describe( 'resolveRoute', () => {
 
 	it( 'reports all params as unresolved when no resolver is provided', async () => {
 		const result = await resolveRoute( '/apps/:appId/:env/logs' );
+		expect( result ).toEqual( {
+			path: '/apps/:appId/:env/logs',
+			unresolved: [ { name: 'appId' }, { name: 'env' } ],
+			selections: {},
+		} );
+	} );
+
+	it( 'reports a param as unresolved when the resolver returns undefined', async () => {
+		vi.spyOn( console, 'warn' ).mockImplementation( () => {} );
+		const resolver = ( param: string ) => {
+			if ( param === 'appId' ) {
+				return '42';
+			}
+			return undefined as unknown as ResolvedParam;
+		};
+
+		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
+		expect( result ).toEqual( {
+			path: '/apps/42/:env/logs',
+			unresolved: [ { name: 'env' } ],
+			selections: { appId: '42' },
+		} );
+	} );
+
+	it( 'reports params as unresolved when the resolver returns a non-string non-array value', async () => {
+		vi.spyOn( console, 'warn' ).mockImplementation( () => {} );
+		const unsupportedValue = { appId: '42' };
+		const resolver = () => unsupportedValue as unknown as ResolvedParam;
+
+		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/:appId/:env/logs',
 			unresolved: [ { name: 'appId' }, { name: 'env' } ],
