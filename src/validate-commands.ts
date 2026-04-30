@@ -1,3 +1,6 @@
+import { isNonProductionEnvironment } from './utils/environment';
+import { warnInNonProduction } from './utils/logging';
+
 import type { Command } from './types';
 
 /**
@@ -12,13 +15,7 @@ import type { Command } from './types';
  * meaningful for plain-JS consumers and dynamic data (e.g. JSON configs).
  */
 export function validateCommands( commands: Partial< Command >[] ): void {
-	const nodeEnv = (
-		globalThis as typeof globalThis & {
-			process?: { env?: { NODE_ENV?: string } };
-		}
-	 ).process?.env?.NODE_ENV;
-
-	if ( nodeEnv === 'production' || nodeEnv === undefined ) {
+	if ( ! isNonProductionEnvironment() ) {
 		return;
 	}
 
@@ -28,19 +25,21 @@ export function validateCommands( commands: Partial< Command >[] ): void {
 		const id = command.id;
 
 		if ( typeof id !== 'string' || id.length === 0 ) {
-			// eslint-disable-next-line no-console
-			console.warn( `[@automattic/commands] Command has an empty or missing "id".`, command );
+			warnInNonProduction(
+				`[@automattic/commands] Command has an empty or missing "id".`,
+				command
+			);
 		}
 
 		if ( typeof command.title !== 'string' || command.title.length === 0 ) {
-			// eslint-disable-next-line no-console
-			console.warn( `[@automattic/commands] Command "${ id }" has an empty or missing "title".` );
+			warnInNonProduction(
+				`[@automattic/commands] Command "${ id }" has an empty or missing "title".`
+			);
 		}
 
 		if ( typeof id === 'string' && id.length > 0 ) {
 			if ( seenIds.has( id ) ) {
-				// eslint-disable-next-line no-console
-				console.warn( `[@automattic/commands] Duplicate command id "${ id }".` );
+				warnInNonProduction( `[@automattic/commands] Duplicate command id "${ id }".` );
 			}
 			seenIds.add( id );
 		}
@@ -49,15 +48,13 @@ export function validateCommands( commands: Partial< Command >[] ): void {
 		const hasAction = typeof command.action === 'function';
 
 		if ( ! hasRoute && ! hasAction ) {
-			// eslint-disable-next-line no-console
-			console.warn(
+			warnInNonProduction(
 				`[@automattic/commands] Command "${ id }" must have either "route" or "action".`
 			);
 		}
 
 		if ( hasRoute && hasAction ) {
-			// eslint-disable-next-line no-console
-			console.warn(
+			warnInNonProduction(
 				`[@automattic/commands] Command "${ id }" must not have both "route" and "action".`
 			);
 		}

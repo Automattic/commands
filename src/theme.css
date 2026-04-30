@@ -205,3 +205,11 @@
 	font-size: var( --cmdk-loading-font-size, 14px );
 	line-height: var( --cmdk-loading-line-height, 20px );
 }
+
+[cmdk-error] {
+	padding: var( --cmdk-error-padding-y, 24px ) var( --cmdk-error-padding-x, 16px );
+	text-align: center;
+	color: var( --cmdk-error-text, var( --wpds-color-fg-content-negative, #cc1818 ) );
+	font-size: var( --cmdk-error-font-size, 14px );
+	line-height: var( --cmdk-error-line-height, 20px );
+}

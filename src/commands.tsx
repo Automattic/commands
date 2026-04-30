@@ -53,6 +53,7 @@ function Commands( {
 }: CommandsProps ) {
 	const [ open, setOpen ] = useState( false );
 	const [ resolving, setResolving ] = useState( false );
+	const [ resolveError, setResolveError ] = useState< string | null >( null );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
 	const resolveGenRef = useRef( 0 );
 
@@ -69,6 +70,7 @@ function Commands( {
 	const resetParamSelection = useCallback( () => {
 		resolveGenRef.current += 1;
 		setResolving( false );
+		setResolveError( null );
 		setParamSelection( null );
 	}, [] );
 
@@ -107,7 +109,7 @@ function Commands( {
 
 				const gen = ++resolveGenRef.current;
 				setResolving( true );
-				void resolveRoute( item.route, resolver )
+				void resolveRoute( item.route, resolver, {} )
 					.then( result => {
 						if ( gen !== resolveGenRef.current ) {
 							return;
@@ -119,6 +121,7 @@ function Commands( {
 							setParamSelection( {
 								path: result.path,
 								pending: result.unresolved,
+								selections: result.selections,
 							} );
 						}
 					} )
@@ -128,14 +131,15 @@ function Commands( {
 						}
 						// eslint-disable-next-line no-console
 						console.error( '[@automattic/commands] Route resolution failed:', error );
-						resetParamSelection();
+						setResolving( false );
+						setResolveError( error instanceof Error ? error.message : 'Route resolution failed' );
 					} );
 			} else {
 				item.action?.();
 				setOpen( false );
 			}
 		},
-		[ addRecent, completeNavigation, resetParamSelection, resolver, showRecent ]
+		[ addRecent, completeNavigation, resolver, showRecent ]
 	);
 
 	const handleParamOptionSelect = useCallback(
@@ -146,26 +150,67 @@ function Commands( {
 			const current = paramSelection.pending[ 0 ];
 			const updatedPath = replaceRouteParam( paramSelection.path, current.name, value );
 			const remaining = paramSelection.pending.slice( 1 );
+			const updatedSelections = { ...paramSelection.selections, [ current.name ]: value };
 
 			if ( remaining.length === 0 ) {
 				completeNavigation( updatedPath );
-			} else {
-				setParamSelection( { path: updatedPath, pending: remaining } );
+				return;
 			}
+
+			// Re-resolve remaining params so dependent options can update.
+			const gen = ++resolveGenRef.current;
+			setResolving( true );
+			void resolveRoute( updatedPath, resolver, updatedSelections )
+				.then( result => {
+					if ( gen !== resolveGenRef.current ) {
+						return;
+					}
+					setResolving( false );
+					if ( result.unresolved.length === 0 ) {
+						completeNavigation( result.path );
+					} else {
+						setParamSelection( {
+							path: result.path,
+							pending: result.unresolved,
+							selections: result.selections,
+						} );
+					}
+				} )
+				.catch( ( error: unknown ) => {
+					if ( gen !== resolveGenRef.current ) {
+						return;
+					}
+					// eslint-disable-next-line no-console
+					console.error( '[@automattic/commands] Route resolution failed:', error );
+					setResolving( false );
+					setResolveError( error instanceof Error ? error.message : 'Route resolution failed' );
+				} );
 		},
-		[ paramSelection, completeNavigation ]
+		[ paramSelection, completeNavigation, resolver ]
 	);
 
 	const handleParamKeyDown = useCallback(
 		( event: React.KeyboardEvent< HTMLInputElement > ) => {
+			if ( resolveError && event.key === 'Backspace' ) {
+				resetParamSelection();
+				return;
+			}
+
 			if ( event.key === 'Backspace' && event.currentTarget.value === '' ) {
 				resetParamSelection();
 			}
 		},
-		[ resetParamSelection ]
+		[ resetParamSelection, resolveError ]
 	);
 
 	const currentParam = paramSelection?.pending[ 0 ] ?? null;
+	let placeholderText = currentParam
+		? `Select ${ currentParam.name }. Backspace to cancel.`
+		: placeholder;
+
+	if ( resolveError ) {
+		placeholderText = 'Route resolution failed. Backspace to cancel.';
+	}
 
 	return (
 		<CommandPrimitive.Dialog
@@ -185,15 +230,14 @@ function Commands( {
 			<div { ...themeAttributes.inputWrapper }>
 				<SearchIcon />
 				<CommandPrimitive.Input
-					placeholder={
-						currentParam ? `Select ${ currentParam.name }. Backspace to cancel.` : placeholder
-					}
-					onKeyDown={ paramSelection ? handleParamKeyDown : undefined }
+					placeholder={ placeholderText }
+					onKeyDown={ paramSelection || resolveError ? handleParamKeyDown : undefined }
 				/>
 			</div>
 			<CommandPrimitive.List>
 				<CommandListContent
 					resolving={ resolving }
+					resolveError={ resolveError }
 					paramSelection={ paramSelection }
 					currentParam={ currentParam }
 					emptyState={ emptyState }

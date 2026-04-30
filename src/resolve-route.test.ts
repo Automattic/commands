@@ -1,6 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 
 import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
+
+import type { ResolvedParam } from './types';
+
+afterEach( () => {
+	vi.restoreAllMocks();
+} );
 
 /* ---------- extractParams ---------- */
 
@@ -61,43 +67,43 @@ describe( 'replaceRouteParam', () => {
 describe( 'resolveRoute', () => {
 	it( 'passes routes with no params through unchanged', async () => {
 		const result = await resolveRoute( '/home' );
-		expect( result ).toEqual( { path: '/home', unresolved: [] } );
+		expect( result ).toEqual( { path: '/home', unresolved: [], selections: {} } );
 	} );
 
 	it( 'resolves a single param via a sync resolver', async () => {
-		const resolver = ( params: string[] ) => {
-			expect( params ).toEqual( [ 'appId' ] );
-			return { appId: '42' };
+		const resolver = ( param: string ) => {
+			expect( param ).toBe( 'appId' );
+			return '42';
 		};
 
 		const result = await resolveRoute( '/apps/:appId', resolver );
-		expect( result ).toEqual( { path: '/apps/42', unresolved: [] } );
+		expect( result ).toEqual( { path: '/apps/42', unresolved: [], selections: { appId: '42' } } );
 	} );
 
 	it( 'resolves multiple params via a sync resolver', async () => {
-		const resolver = () => ( { appId: '42', env: 'production' } );
+		const resolver = ( param: string ) => {
+			if ( param === 'appId' ) {
+				return '42';
+			}
+			return 'production';
+		};
 
 		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/42/production/logs',
 			unresolved: [],
+			selections: { appId: '42', env: 'production' },
 		} );
 	} );
 
 	it( 'resolves params via an async resolver', async () => {
-		const resolver = () => Promise.resolve( { appId: '99' } );
+		const resolver = () => Promise.resolve( '99' );
 
 		const result = await resolveRoute( '/apps/:appId', resolver );
-		expect( result ).toEqual( { path: '/apps/99', unresolved: [] } );
-	} );
-
-	it( 'reports unresolved params when resolver returns partial values', async () => {
-		const resolver = () => ( { appId: '42' } );
-
-		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
 		expect( result ).toEqual( {
-			path: '/apps/42/:env/logs',
-			unresolved: [ { name: 'env' } ],
+			path: '/apps/99',
+			unresolved: [],
+			selections: { appId: '99' },
 		} );
 	} );
 
@@ -106,70 +112,144 @@ describe( 'resolveRoute', () => {
 		expect( result ).toEqual( {
 			path: '/apps/:appId/:env/logs',
 			unresolved: [ { name: 'appId' }, { name: 'env' } ],
+			selections: {},
 		} );
 	} );
 
-	it( 'handles a resolver that returns an empty object', async () => {
-		const resolver = () => ( {} );
+	it( 'reports a param as unresolved when the resolver returns undefined', async () => {
+		vi.spyOn( console, 'warn' ).mockImplementation( () => {} );
+		const resolver = ( param: string ) => {
+			if ( param === 'appId' ) {
+				return '42';
+			}
+			return undefined as unknown as ResolvedParam;
+		};
 
-		const result = await resolveRoute( '/apps/:appId', resolver );
+		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
 		expect( result ).toEqual( {
-			path: '/apps/:appId',
-			unresolved: [ { name: 'appId' } ],
+			path: '/apps/42/:env/logs',
+			unresolved: [ { name: 'env' } ],
+			selections: { appId: '42' },
+		} );
+	} );
+
+	it( 'reports params as unresolved when the resolver returns a non-string non-array value', async () => {
+		vi.spyOn( console, 'warn' ).mockImplementation( () => {} );
+		const unsupportedValue = { appId: '42' };
+		const resolver = () => unsupportedValue as unknown as ResolvedParam;
+
+		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
+		expect( result ).toEqual( {
+			path: '/apps/:appId/:env/logs',
+			unresolved: [ { name: 'appId' }, { name: 'env' } ],
+			selections: {},
 		} );
 	} );
 
 	it( 'does not corrupt overlapping param names during resolution', async () => {
-		const resolver = () => ( { app: 'myapp' } );
+		const resolver = ( param: string ) => {
+			if ( param === 'app' ) {
+				return 'myapp';
+			}
+			return [ 'id-1', 'id-2' ];
+		};
 
 		const result = await resolveRoute( '/apps/:app/:appId', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/myapp/:appId',
-			unresolved: [ { name: 'appId' } ],
+			unresolved: [ { name: 'appId', options: [ 'id-1', 'id-2' ] } ],
+			selections: { app: 'myapp' },
 		} );
 	} );
 
 	/* --- options support --- */
 
 	it( 'reports options when resolver returns an array for a param', async () => {
-		const resolver = () => ( {
-			appId: '42',
-			env: [ 'production', 'staging', 'development' ],
-		} );
+		const resolver = ( param: string ) => {
+			if ( param === 'appId' ) {
+				return '42';
+			}
+			return [ 'production', 'staging', 'development' ];
+		};
 
 		const result = await resolveRoute( '/apps/:appId/:env/logs', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/42/:env/logs',
 			unresolved: [ { name: 'env', options: [ 'production', 'staging', 'development' ] } ],
+			selections: { appId: '42' },
 		} );
 	} );
 
-	it( 'reports multiple params with options', async () => {
-		const resolver = () => ( {
-			appId: [ 'app-one', 'app-two' ],
-			env: [ 'production', 'staging' ],
-		} );
+	it( 'stops at first array and lists remaining params as unresolved', async () => {
+		const resolver = () => [ 'app-one', 'app-two' ];
 
 		const result = await resolveRoute( '/apps/:appId/:env', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/:appId/:env',
-			unresolved: [
-				{ name: 'appId', options: [ 'app-one', 'app-two' ] },
-				{ name: 'env', options: [ 'production', 'staging' ] },
-			],
+			unresolved: [ { name: 'appId', options: [ 'app-one', 'app-two' ] }, { name: 'env' } ],
+			selections: {},
 		} );
 	} );
 
-	it( 'mixes resolved values and options in a single call', async () => {
-		const resolver = () => ( {
-			appId: 'my-app',
-			env: [ 'prod', 'dev' ],
-		} );
+	it( 'auto-resolves string params then stops at an array param', async () => {
+		const resolver = ( param: string ) => {
+			if ( param === 'appId' ) {
+				return 'my-app';
+			}
+			return [ 'prod', 'dev' ];
+		};
 
 		const result = await resolveRoute( '/apps/:appId/:env/audit', resolver );
 		expect( result ).toEqual( {
 			path: '/apps/my-app/:env/audit',
 			unresolved: [ { name: 'env', options: [ 'prod', 'dev' ] } ],
+			selections: { appId: 'my-app' },
 		} );
+	} );
+
+	/* --- selections support --- */
+
+	it( 'passes an empty selections object by default', async () => {
+		const resolver = ( param: string, selections: Record< string, string > ) => {
+			expect( selections ).toEqual( {} );
+			return '42';
+		};
+
+		await resolveRoute( '/apps/:appId', resolver );
+	} );
+
+	it( 'forwards caller-provided selections to the resolver', async () => {
+		const resolver = ( param: string, selections: Record< string, string > ) => {
+			expect( param ).toBe( 'env' );
+			expect( selections ).toEqual( { appId: 'my-app' } );
+			return [ 'prod', 'staging' ];
+		};
+
+		const result = await resolveRoute( '/apps/my-app/:env/audit', resolver, {
+			appId: 'my-app',
+		} );
+		expect( result ).toEqual( {
+			path: '/apps/my-app/:env/audit',
+			unresolved: [ { name: 'env', options: [ 'prod', 'staging' ] } ],
+			selections: { appId: 'my-app' },
+		} );
+	} );
+
+	it( 'accumulates auto-resolved values into selections for subsequent params', async () => {
+		const calls: Array< [ string, Record< string, string > ] > = [];
+		const resolver = ( param: string, selections: Record< string, string > ) => {
+			calls.push( [ param, { ...selections } ] );
+			if ( param === 'appId' ) {
+				return 'my-app';
+			}
+			return [ 'prod', 'staging' ];
+		};
+
+		await resolveRoute( '/apps/:appId/:env/logs', resolver );
+
+		expect( calls ).toEqual( [
+			[ 'appId', {} ],
+			[ 'env', { appId: 'my-app' } ],
+		] );
 	} );
 } );

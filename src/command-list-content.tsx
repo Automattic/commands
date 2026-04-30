@@ -9,10 +9,12 @@ const themeAttributes = {
 	itemDescription: { 'cmdk-item-description': '' },
 	itemShortcut: { 'cmdk-item-shortcut': '' },
 	itemType: { 'cmdk-item-type': '' },
+	error: { 'cmdk-error': '' },
 } as const;
 
 export function CommandListContent( {
 	resolving,
+	resolveError,
 	paramSelection,
 	currentParam,
 	emptyState,
@@ -27,6 +29,14 @@ export function CommandListContent( {
 
 	if ( resolving ) {
 		return <CommandPrimitive.Loading>Loading...</CommandPrimitive.Loading>;
+	}
+
+	if ( resolveError ) {
+		return (
+			<div { ...themeAttributes.error } role="alert">
+				{ resolveError }
+			</div>
+		);
 	}
 
 	if ( ! paramSelection ) {

@@ -1,4 +1,6 @@
-import type { CommandsProps, ResolveRouteResult, UnresolvedParam } from './types';
+import { warnInNonProduction } from './utils/logging';
+
+import type { CommandsProps, ResolveRouteResult } from './types';
 
 const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)(?=[/?#]|$)/g;
 
@@ -29,50 +31,70 @@ export function replaceRouteParam( route: string, name: string, value: string ):
 }
 
 /**
- * Resolves route parameters by calling the provided resolver.
+ * Resolves route parameters by calling the provided resolver once per param.
  *
  * 1. Extracts all `:param` patterns from the route.
  * 2. If no params exist, returns the route unchanged.
- * 3. Calls the resolver with param names (e.g. `["appId", "env"]`).
+ * 3. Calls the resolver for each param in left-to-right order, passing
+ *    the param name and accumulated selections (auto-resolved values +
+ *    previously-selected values).
  * 4. For each returned value:
- *    - string → replaces the placeholder in the path.
- *    - string[] → listed as unresolved with selectable options.
- *    - missing → listed as unresolved without options.
+ *    - string → replaces the placeholder in the path and continues.
+ *    - string[] → stops and lists that param as unresolved with options,
+ *      plus any remaining params as unresolved without options.
+ *    - anything else → stops and lists that param plus remaining params as
+ *      unresolved without options.
  */
 export async function resolveRoute(
 	route: string,
-	resolver?: CommandsProps[ 'resolver' ]
+	resolver?: CommandsProps[ 'resolver' ],
+	selections: Record< string, string > = {}
 ): Promise< ResolveRouteResult > {
 	const paramNames = extractParams( route );
 
 	if ( paramNames.length === 0 ) {
-		return { path: route, unresolved: [] };
+		return { path: route, unresolved: [], selections };
 	}
 
 	if ( ! resolver ) {
 		return {
 			path: route,
 			unresolved: paramNames.map( name => ( { name } ) ),
+			selections,
 		};
 	}
 
-	const resolved = await resolver( paramNames );
-
 	let path = route;
-	const unresolved: UnresolvedParam[] = [];
+	const accumulated = { ...selections };
 
-	for ( const name of paramNames ) {
-		// eslint-disable-next-line security/detect-object-injection
-		const value = resolved[ name ];
+	for ( const [ idx, name ] of paramNames.entries() ) {
+		// eslint-disable-next-line no-await-in-loop -- sequential resolution is intentional
+		const value = await resolver( name, accumulated );
 
-		if ( Array.isArray( value ) ) {
-			unresolved.push( { name, options: value } );
-		} else if ( typeof value === 'string' ) {
+		if ( typeof value === 'string' ) {
 			path = replaceRouteParam( path, name, value );
+			// eslint-disable-next-line security/detect-object-injection
+			accumulated[ name ] = value;
+		} else if ( Array.isArray( value ) ) {
+			const remaining = paramNames.slice( idx + 1 ).map( rest => ( { name: rest } ) );
+			return {
+				path,
+				unresolved: [ { name, options: value }, ...remaining ],
+				selections: accumulated,
+			};
 		} else {
-			unresolved.push( { name } );
+			warnInNonProduction(
+				`[@automattic/commands] Resolver returned an unsupported value for ":${ name }".`,
+				value
+			);
+			const remaining = paramNames.slice( idx + 1 ).map( rest => ( { name: rest } ) );
+			return {
+				path,
+				unresolved: [ { name }, ...remaining ],
+				selections: accumulated,
+			};
 		}
 	}
 
-	return { path, unresolved };
+	return { path, unresolved: [], selections: accumulated };
 }
