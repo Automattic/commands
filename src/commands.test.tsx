@@ -324,6 +324,22 @@ describe( 'Commands', () => {
 			expect( groups[ 1 ] ).toBe( pagesGroup );
 		} );
 
+		it( 'hides recently used commands while searching', async () => {
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" /> );
+			await openPaletteAndWait();
+			await selectCommand( 'Settings' );
+
+			await openPaletteAndWait();
+			expect( screen.getByText( 'Recently Used' ) ).toBeInTheDocument();
+
+			typeSearch( 'Settings' );
+
+			await waitFor( () => {
+				expect( screen.queryByText( 'Recently Used' ) ).not.toBeInTheDocument();
+			} );
+			expect( screen.getByText( 'Settings' ) ).toBeInTheDocument();
+		} );
+
 		it( 'does not render recently used commands when showRecent is false', async () => {
 			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" showRecent={ false } /> );
 			await openPaletteAndWait();
