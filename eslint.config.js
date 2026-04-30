@@ -9,6 +9,12 @@ export default [
 		},
 	},
 	{
+		files: [ 'bin/**/*.mjs' ],
+		rules: {
+			'no-console': 'off',
+		},
+	},
+	{
 		ignores: [ 'dist/' ],
 	},
 ];
