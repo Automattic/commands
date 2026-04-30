@@ -1002,6 +1002,40 @@ describe( 'Commands', () => {
 			errorSpy.mockRestore();
 		} );
 
+		it( 'clears the error on Backspace after selecting from search', async () => {
+			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+			const resolver = (): Promise< string > => Promise.reject( new Error( 'oops' ) );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			typeSearch( 'Log' );
+			fireEvent.click( screen.getByText( 'Logs' ) );
+
+			await waitFor( () => {
+				expect( screen.getByRole( 'alert' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Route resolution failed. Backspace to cancel.' );
+			expect( input ).toHaveValue( 'Log' );
+
+			fireEvent.keyDown( input, { key: 'Backspace' } );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'alert' ) ).not.toBeInTheDocument();
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+			errorSpy.mockRestore();
+		} );
+
 		it( 'shows the error when a dependent param resolver rejects', async () => {
 			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
 			const onNavigate = vi.fn();
