@@ -131,8 +131,10 @@ Routes can contain `:param` placeholders that are resolved at runtime via the `r
 ### Example: static and dynamic params
 
 ```tsx
-const resolver = async params => {
-	const result = {};
+import type { CommandsProps, ResolvedParam } from '@automattic/commands';
+
+const resolver: CommandsProps[ 'resolver' ] = async params => {
+	const result: Record< string, ResolvedParam > = {};
 
 	// Static: always resolve appId from context
 	if ( params.includes( 'appId' ) ) {
