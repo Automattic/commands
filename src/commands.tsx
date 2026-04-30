@@ -339,7 +339,7 @@ function Commands( {
 			</VisuallyHidden>
 			<ResultCountAnnouncement
 				itemLabel={ currentParam ? 'option' : 'command' }
-				silent={ resolving }
+				silent={ resolving || Boolean( resolveError ) }
 			/>
 			<div { ...themeAttributes.inputWrapper }>
 				<SearchIcon />

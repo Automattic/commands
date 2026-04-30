@@ -1236,6 +1236,7 @@ describe( 'Commands', () => {
 				expect( screen.getByRole( 'alert' ) ).toHaveTextContent( 'boom' );
 			} );
 
+			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
 			expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
 			expect( onNavigate ).not.toHaveBeenCalled();
 			expect( errorSpy ).toHaveBeenCalledWith(
@@ -1350,6 +1351,7 @@ describe( 'Commands', () => {
 				expect( screen.getByRole( 'alert' ) ).toHaveTextContent( 'Cannot load env' );
 			} );
 
+			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
 			expect( onNavigate ).not.toHaveBeenCalled();
 			errorSpy.mockRestore();
 		} );
