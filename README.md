@@ -1,9 +1,10 @@
 # @automattic/commands
 
 ## Beta Notice
+
 > This package is in beta. APIs, behavior, and styling may change without notice until a stable release is announced.
 
-----
+---
 
 Config-driven CMD+K command palette for React, powered by [cmdk](https://cmdk.paco.me/).
 
