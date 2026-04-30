@@ -69,18 +69,18 @@ Every command must have either `route` or `action` (but not both). In developmen
 
 Props for the `<Commands />` component.
 
-| Prop               | Type                                                                | Default                         | Description                                                                                                                                     |
-| ------------------ | ------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `commands`         | `Command[]`                                                         | —                               | Array of command definitions.                                                                                                                   |
-| `resolver`         | `(params: string[]) => Record<string, ResolvedParam> \| Promise<…>` | —                               | Resolves route `:param` variables at runtime. See [Resolver pattern](#resolver-pattern).                                                        |
-| `onNavigate`       | `(path: string) => void`                                            | —                               | Called with the fully resolved path when a route command is selected.                                                                           |
-| `triggerKey`       | `string`                                                            | `"Mod+k"`                       | Keyboard shortcut to toggle the palette. `Mod` maps to Cmd on macOS, Ctrl elsewhere. Modifiers are `+`-separated: `"Meta+k"`, `"Ctrl+Shift+p"`. |
-| `placeholder`      | `string`                                                            | `"Search commands..."`          | Placeholder text for the search input.                                                                                                          |
-| `filter`           | `(value: string, search: string) => number`                         | cmdk built-in                   | Custom scoring function. Return 0 to hide, 1 to rank highest.                                                                                   |
-| `emptyState`       | `ReactNode`                                                         | `"No results found."`           | Content shown when no commands match the search.                                                                                                |
-| `showRecent`       | `boolean`                                                           | `true`                          | Show recently selected commands when the search input is empty.                                                                                 |
-| `recentLimit`      | `number`                                                            | `5`                             | Maximum number of recent commands to display.                                                                                                   |
-| `recentStorageKey` | `string`                                                            | `"@automattic/commands:recent"` | `localStorage` key for persisting recent commands.                                                                                              |
+| Prop               | Type                                                                                             | Default                         | Description                                                                                                                                     |
+| ------------------ | ------------------------------------------------------------------------------------------------ | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `commands`         | `Command[]`                                                                                      | —                               | Array of command definitions.                                                                                                                   |
+| `resolver`         | `(param: string, selections: Record<string, string>) => ResolvedParam \| Promise<ResolvedParam>` | —                               | Resolves route `:param` variables one at a time. See [Resolver pattern](#resolver-pattern).                                                     |
+| `onNavigate`       | `(path: string) => void`                                                                         | —                               | Called with the fully resolved path when a route command is selected.                                                                           |
+| `triggerKey`       | `string`                                                                                         | `"Mod+k"`                       | Keyboard shortcut to toggle the palette. `Mod` maps to Cmd on macOS, Ctrl elsewhere. Modifiers are `+`-separated: `"Meta+k"`, `"Ctrl+Shift+p"`. |
+| `placeholder`      | `string`                                                                                         | `"Search commands..."`          | Placeholder text for the search input.                                                                                                          |
+| `filter`           | `(value: string, search: string) => number`                                                      | cmdk built-in                   | Custom scoring function. Return 0 to hide, 1 to rank highest.                                                                                   |
+| `emptyState`       | `ReactNode`                                                                                      | `"No results found."`           | Content shown when no commands match the search.                                                                                                |
+| `showRecent`       | `boolean`                                                                                        | `true`                          | Show recently selected commands when the search input is empty.                                                                                 |
+| `recentLimit`      | `number`                                                                                         | `5`                             | Maximum number of recent commands to display.                                                                                                   |
+| `recentStorageKey` | `string`                                                                                         | `"@automattic/commands:recent"` | `localStorage` key for persisting recent commands.                                                                                              |
 
 ### Utility exports
 
@@ -90,11 +90,11 @@ The package also exports route-resolution helpers:
 import { resolveRoute, extractParams, replaceRouteParam } from '@automattic/commands';
 ```
 
-| Function            | Signature                                                   | Description                                                                                                         |
-| ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `extractParams`     | `(route: string) => string[]`                               | Extracts `:param` names from a route. `"/apps/:id/logs"` → `["id"]`.                                                |
-| `replaceRouteParam` | `(route: string, name: string, value: string) => string`    | Replaces a single named parameter in a route string.                                                                |
-| `resolveRoute`      | `(route: string, resolver?) => Promise<ResolveRouteResult>` | Runs the full resolution pipeline: extract params → call resolver → return resolved path and any unresolved params. |
+| Function            | Signature                                                                | Description                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `extractParams`     | `(route: string) => string[]`                                            | Extracts `:param` names from a route. `"/apps/:id/logs"` → `["id"]`.                                                                   |
+| `replaceRouteParam` | `(route: string, name: string, value: string) => string`                 | Replaces a single named parameter in a route string.                                                                                   |
+| `resolveRoute`      | `(route: string, resolver?, selections?) => Promise<ResolveRouteResult>` | Runs the full resolution pipeline: extract params → call resolver per param → return resolved path, unresolved params, and selections. |
 
 ### Types
 
@@ -110,7 +110,7 @@ import type {
 
 **`ResolvedParam`** — `string | string[]`. A string means the param is fully resolved; an array means the palette shows a sub-layer for the user to pick one.
 
-**`ResolveRouteResult`** — `{ path: string; unresolved: UnresolvedParam[] }`. The path with resolved params replaced; unresolved params listed with optional selectable options.
+**`ResolveRouteResult`** — `{ path: string; unresolved: UnresolvedParam[]; selections: Record<string, string> }`. The path with resolved params replaced, unresolved params listed with optional selectable options, and accumulated param selections.
 
 **`UnresolvedParam`** — `{ name: string; options?: string[] }`. A param that still needs a value, optionally with options for the user to choose from.
 
@@ -121,33 +121,30 @@ Routes can contain `:param` placeholders that are resolved at runtime via the `r
 ### How it works
 
 1. User selects a command with a parameterized route (e.g. `/apps/:appId/:env/logs`).
-2. The palette calls `resolver(["appId", "env"])`.
-3. For each param, the resolver returns:
-   - A **string** → the param is replaced in the path immediately.
-   - A **string array** → the palette shows a sub-layer where the user picks one option.
-   - **Nothing** (key omitted) → the param is listed as unresolved with no options.
-4. Once all params are resolved, `onNavigate` fires with the final path.
+2. The palette extracts params from left to right and calls `resolver(param, selections)` for the next unresolved param.
+3. `selections` contains values from earlier params, including auto-resolved strings and user-selected options.
+4. For each param, the resolver returns:
+   - A **string** → the param is replaced in the path immediately, added to `selections`, and the next param is resolved.
+   - A **string array** → the palette shows a sub-layer where the user picks one option. Remaining params are resolved after the user selects a value.
+   - **Anything else** → the param is listed as unresolved with no options.
+5. Once all params are resolved, `onNavigate` fires with the final path.
 
-### Example: static and dynamic params
+### Example: dependent params
 
 ```tsx
-import type { CommandsProps, ResolvedParam } from '@automattic/commands';
+import type { CommandsProps } from '@automattic/commands';
 
-const resolver: CommandsProps[ 'resolver' ] = async params => {
-	const result: Record< string, ResolvedParam > = {};
-
-	// Static: always resolve appId from context
-	if ( params.includes( 'appId' ) ) {
-		result.appId = currentApp.id; // string → replaced immediately
+const resolver: CommandsProps[ 'resolver' ] = async ( param, selections ) => {
+	if ( param === 'appId' ) {
+		return [ 'my-app', 'other-app' ];
 	}
 
-	// Dynamic: fetch environment options from an API
-	if ( params.includes( 'env' ) ) {
-		const envs = await fetchEnvironments();
-		result.env = envs.map( e => e.name ); // string[] → user picks one
+	if ( param === 'env' ) {
+		const envs = await fetchEnvironments( selections.appId );
+		return envs.map( env => env.name );
 	}
 
-	return result;
+	return [];
 };
 
 <Commands
@@ -159,17 +156,17 @@ const resolver: CommandsProps[ 'resolver' ] = async params => {
 
 When the user selects "App logs":
 
-1. The palette shows a loading state while the resolver runs.
-2. `:appId` is replaced immediately (e.g. `/apps/my-app/:env/logs`).
-3. A sub-layer appears listing the environment options. The user picks one.
+1. The palette asks the resolver for `appId` options and shows a sub-layer.
+2. The user picks an app, and that value is added to `selections`.
+3. The palette asks the resolver for `env` options with `selections.appId` available.
 4. `onNavigate` fires with `/apps/my-app/production/logs`.
 
 ### Resolver tips
 
 - The resolver can be sync or async. Async resolvers trigger a loading state in the palette.
-- If the resolver throws, the error is logged and the palette resets — no navigation occurs.
-- Multiple params are resolved in a single `resolver()` call, not one call per param.
-- Press **Backspace** on an empty input during param selection to cancel and return to the command list.
+- If the resolver throws, the error is logged and shown in the palette — no navigation occurs.
+- Multiple params are resolved sequentially, one `resolver()` call per param.
+- Press **Backspace** on an empty input during param selection to cancel and return to the command list. Press **Backspace** from the error state to dismiss it.
 
 ## Theming
 
@@ -347,8 +344,9 @@ When `showRecent` is `true` (the default), the palette tracks which commands the
 
 ### Resolver errors
 
-- If the resolver throws or rejects, the error is logged to `console.error` and the palette resets. Check the console for `[@automattic/commands] Route resolution failed:`.
-- The resolver receives all param names in a single call. Make sure it returns a value for each param you want resolved.
+- If the resolver throws or rejects, the error is logged to `console.error` and shown inside the palette. Check the console for `[@automattic/commands] Route resolution failed:`.
+- Press **Backspace** to dismiss the error and return to the command list, or press **Escape** to close the palette.
+- The resolver receives one param at a time. Return a string to auto-resolve it, or an array of strings to let the user choose.
 
 ### "Command has an empty or missing id" warning
 
