@@ -1,6 +1,6 @@
 import { Command as CommandPrimitive, useCommandState } from 'cmdk';
 
-import type { Command, CommandListContentProps } from './types';
+import type { Command, CommandListContentProps, ResolvedOption } from './types';
 
 const themeAttributes = {
 	itemIcon: { 'cmdk-item-icon': '' },
@@ -87,18 +87,44 @@ export function CommandListContent( {
 			<CommandPrimitive.Empty>No matching options.</CommandPrimitive.Empty>
 			<CommandPrimitive.Group heading={ `Choose ${ currentParam.name }` }>
 				{ currentParam.options.map( option => (
-					<CommandPrimitive.Item
-						key={ option }
-						value={ option }
-						onSelect={ () => onParamOptionSelect( option ) }
-					>
-						<span { ...themeAttributes.itemContent }>
-							<span { ...themeAttributes.itemTitle }>{ option }</span>
-						</span>
-					</CommandPrimitive.Item>
+					<OptionItem
+						key={ optionValue( option ) }
+						option={ option }
+						onSelect={ onParamOptionSelect }
+					/>
 				) ) }
 			</CommandPrimitive.Group>
 		</>
+	);
+}
+
+/* ---------- Option helpers ---------- */
+
+function optionLabel( option: ResolvedOption ): string {
+	return typeof option === 'string' ? option : option.label;
+}
+
+function optionValue( option: ResolvedOption ): string {
+	return typeof option === 'string' ? option : option.value;
+}
+
+/* ---------- Option item ---------- */
+
+interface OptionItemProps {
+	option: ResolvedOption;
+	onSelect: ( value: string ) => void;
+}
+
+function OptionItem( { option, onSelect }: OptionItemProps ) {
+	const label = optionLabel( option );
+	const value = optionValue( option );
+
+	return (
+		<CommandPrimitive.Item value={ label } onSelect={ () => onSelect( value ) }>
+			<span { ...themeAttributes.itemContent }>
+				<span { ...themeAttributes.itemTitle }>{ label }</span>
+			</span>
+		</CommandPrimitive.Item>
 	);
 }
 

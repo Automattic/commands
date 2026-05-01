@@ -55,7 +55,9 @@ function Commands( {
 	const [ resolving, setResolving ] = useState( false );
 	const [ resolveError, setResolveError ] = useState< string | null >( null );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
+	const [ paramSearch, setParamSearch ] = useState( '' );
 	const resolveGenRef = useRef( 0 );
+	const searchGenRef = useRef( 0 );
 
 	useEffect( () => {
 		validateCommands( commands );
@@ -69,9 +71,11 @@ function Commands( {
 
 	const resetParamSelection = useCallback( () => {
 		resolveGenRef.current += 1;
+		searchGenRef.current += 1;
 		setResolving( false );
 		setResolveError( null );
 		setParamSelection( null );
+		setParamSearch( '' );
 	}, [] );
 
 	const handleOpenChange = useCallback(
@@ -204,6 +208,62 @@ function Commands( {
 	);
 
 	const currentParam = paramSelection?.pending[ 0 ] ?? null;
+
+	// Reset search when the active param changes (e.g. after selecting an option).
+	const currentParamName = currentParam?.name;
+	useEffect( () => {
+		setParamSearch( '' );
+	}, [ currentParamName ] );
+
+	// Debounced search: re-call the resolver for the current param when the
+	// user types during param selection, enabling server-side filtering.
+	useEffect( () => {
+		if ( ! paramSelection || ! resolver || ! currentParam || paramSearch === '' ) {
+			return;
+		}
+
+		const gen = ++searchGenRef.current;
+
+		const timeoutId = setTimeout( () => {
+			setResolving( true );
+			void Promise.resolve( resolver( currentParam.name, paramSelection.selections, paramSearch ) )
+				.then( result => {
+					if ( gen !== searchGenRef.current ) {
+						return;
+					}
+					setResolving( false );
+					if ( Array.isArray( result ) ) {
+						setParamSelection( prev => {
+							if ( ! prev ) {
+								return null;
+							}
+							return {
+								...prev,
+								pending: [
+									{ name: currentParam.name, options: result },
+									...prev.pending.slice( 1 ),
+								],
+							};
+						} );
+					}
+				} )
+				.catch( ( error: unknown ) => {
+					if ( gen !== searchGenRef.current ) {
+						return;
+					}
+					// eslint-disable-next-line no-console
+					console.error( '[@automattic/commands] Search resolution failed:', error );
+					setResolving( false );
+					setResolveError(
+						error instanceof Error ? error.message : 'Search resolution failed'
+					);
+				} );
+		}, 300 );
+
+		return () => clearTimeout( timeoutId );
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when paramSearch changes
+	}, [ paramSearch ] );
+
 	let placeholderText = currentParam
 		? `Select ${ currentParam.name }. Backspace to cancel.`
 		: placeholder;
@@ -232,6 +292,7 @@ function Commands( {
 				<CommandPrimitive.Input
 					placeholder={ placeholderText }
 					onKeyDown={ paramSelection || resolveError ? handleParamKeyDown : undefined }
+					onValueChange={ paramSelection ? setParamSearch : undefined }
 				/>
 			</div>
 			<CommandPrimitive.List>

@@ -48,7 +48,8 @@ export function replaceRouteParam( route: string, name: string, value: string ):
 export async function resolveRoute(
 	route: string,
 	resolver?: CommandsProps[ 'resolver' ],
-	selections: Record< string, string > = {}
+	selections: Record< string, string > = {},
+	search: string = ''
 ): Promise< ResolveRouteResult > {
 	const paramNames = extractParams( route );
 
@@ -69,7 +70,7 @@ export async function resolveRoute(
 
 	for ( const [ idx, name ] of paramNames.entries() ) {
 		// eslint-disable-next-line no-await-in-loop -- sequential resolution is intentional
-		const value = await resolver( name, accumulated );
+		const value = await resolver( name, accumulated, search );
 
 		if ( typeof value === 'string' ) {
 			path = replaceRouteParam( path, name, value );
