@@ -120,7 +120,7 @@ function OptionItem( { option, onSelect }: OptionItemProps ) {
 	const value = optionValue( option );
 
 	return (
-		<CommandPrimitive.Item value={ value } onSelect={ () => onSelect( value ) }>
+		<CommandPrimitive.Item value={ `${ label }:${ value }` } onSelect={ () => onSelect( value ) }>
 			<span { ...themeAttributes.itemContent }>
 				<span { ...themeAttributes.itemTitle }>{ label }</span>
 			</span>
