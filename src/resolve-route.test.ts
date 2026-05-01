@@ -252,4 +252,67 @@ describe( 'resolveRoute', () => {
 			[ 'env', { appId: 'my-app' } ],
 		] );
 	} );
+
+	/* --- labeled value support --- */
+
+	it( 'reports labeled-value options when resolver returns { label, value } objects', async () => {
+		const resolver = () => [
+			{ label: 'My App', value: '42' },
+			{ label: 'Other App', value: '99' },
+		];
+
+		const result = await resolveRoute( '/apps/:appId/logs', resolver );
+		expect( result ).toEqual( {
+			path: '/apps/:appId/logs',
+			unresolved: [
+				{
+					name: 'appId',
+					options: [
+						{ label: 'My App', value: '42' },
+						{ label: 'Other App', value: '99' },
+					],
+				},
+			],
+			selections: {},
+		} );
+	} );
+
+	it( 'supports mixed string and labeled-value options', async () => {
+		const resolver = () => [ 'plain', { label: 'Labeled', value: 'lbl' } ];
+
+		const result = await resolveRoute( '/items/:id', resolver );
+		expect( result ).toEqual( {
+			path: '/items/:id',
+			unresolved: [
+				{
+					name: 'id',
+					options: [ 'plain', { label: 'Labeled', value: 'lbl' } ],
+				},
+			],
+			selections: {},
+		} );
+	} );
+
+	/* --- search parameter support --- */
+
+	it( 'passes an empty search string by default', async () => {
+		const resolver = (
+			_param: string,
+			_selections: Record< string, string >,
+			search: string
+		) => {
+			expect( search ).toBe( '' );
+			return '42';
+		};
+
+		await resolveRoute( '/apps/:appId', resolver );
+	} );
+
+	it( 'forwards the search parameter to the resolver', async () => {
+		const resolver = vi.fn().mockReturnValue( [ 'a', 'b' ] );
+
+		await resolveRoute( '/apps/:appId', resolver, {}, 'my query' );
+
+		expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'my query' );
+	} );
 } );
