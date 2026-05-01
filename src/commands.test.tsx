@@ -975,6 +975,51 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 're-calls the resolver with empty search when the user clears the input', async () => {
+			const resolver = vi.fn().mockImplementation( ( _p: string, _s: unknown, search: string ) => {
+				if ( search === 'Beta' ) {
+					return [ { label: 'Beta App', value: '2' } ];
+				}
+				return [
+					{ label: 'Alpha App', value: '1' },
+					{ label: 'Beta App', value: '2' },
+				];
+			} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Alpha App' ) ).toBeInTheDocument();
+			} );
+
+			// Type to filter
+			const paramInput = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.change( paramInput, { target: { value: 'Beta' } } );
+
+			await waitFor( () => {
+				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'Beta' );
+			} );
+
+			// Clear the input — should re-call resolver with empty search
+			fireEvent.change( paramInput, { target: { value: '' } } );
+
+			await waitFor( () => {
+				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, '' );
+			} );
+		} );
+
 		it( 'shows the sub-layer when params are unresolved without options', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => [];

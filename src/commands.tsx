@@ -58,6 +58,7 @@ function Commands( {
 	const [ paramSearch, setParamSearch ] = useState( '' );
 	const resolveGenRef = useRef( 0 );
 	const searchGenRef = useRef( 0 );
+	const isInitialSearchRef = useRef( true );
 
 	useEffect( () => {
 		validateCommands( commands );
@@ -72,6 +73,7 @@ function Commands( {
 	const resetParamSelection = useCallback( () => {
 		resolveGenRef.current += 1;
 		searchGenRef.current += 1;
+		isInitialSearchRef.current = true;
 		setResolving( false );
 		setResolveError( null );
 		setParamSelection( null );
@@ -153,6 +155,7 @@ function Commands( {
 			}
 			setParamSearch( '' );
 			searchGenRef.current += 1;
+			isInitialSearchRef.current = true;
 			const current = paramSelection.pending[ 0 ];
 			const updatedPath = replaceRouteParam( paramSelection.path, current.name, value );
 			const remaining = paramSelection.pending.slice( 1 );
@@ -213,10 +216,18 @@ function Commands( {
 
 	// Debounced search: re-call the resolver for the current param when the
 	// user types during param selection, enabling server-side filtering.
+	// On initial mount (before the user has typed anything), options already
+	// come from resolveRoute so we skip the call. Once the user has typed
+	// and then clears the input, we re-call with search="" to restore
+	// unfiltered options.
 	useEffect( () => {
-		if ( ! paramSelection || ! resolver || ! currentParam || paramSearch === '' ) {
+		if ( ! paramSelection || ! resolver || ! currentParam ) {
 			return;
 		}
+		if ( paramSearch === '' && isInitialSearchRef.current ) {
+			return;
+		}
+		isInitialSearchRef.current = false;
 
 		const gen = ++searchGenRef.current;
 
