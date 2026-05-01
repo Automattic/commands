@@ -842,8 +842,8 @@ describe( 'Commands', () => {
 				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
 			} );
 
-			// First call: resolver received 'appId' with empty selections
-			expect( resolver ).toHaveBeenCalledWith( 'appId', {} );
+			// First call: resolver received 'appId' with empty selections and empty search
+			expect( resolver ).toHaveBeenCalledWith( 'appId', {}, '' );
 
 			// Select app-one
 			input = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
@@ -855,8 +855,8 @@ describe( 'Commands', () => {
 				expect( screen.getByText( 'staging' ) ).toBeInTheDocument();
 			} );
 
-			// Second call: resolver received 'env' with appId selection
-			expect( resolver ).toHaveBeenCalledWith( 'env', { appId: 'app-one' } );
+			// Second call: resolver received 'env' with appId selection and empty search
+			expect( resolver ).toHaveBeenCalledWith( 'env', { appId: 'app-one' }, '' );
 
 			// Select prod
 			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
@@ -864,6 +864,159 @@ describe( 'Commands', () => {
 
 			await waitFor( () => {
 				expect( onNavigate ).toHaveBeenCalledWith( '/apps/app-one/prod/audit' );
+			} );
+		} );
+
+		it( 'shows labels for labeled-value options and navigates with the value', async () => {
+			const onNavigate = vi.fn();
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [
+						{ label: 'My App', value: '42' },
+						{ label: 'Other App', value: '99' },
+					];
+				}
+				return 'prod';
+			};
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/:env/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Labels should be visible, not raw values
+			await waitFor( () => {
+				expect( screen.getByText( 'My App' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'Other App' ) ).toBeInTheDocument();
+			} );
+			expect( screen.queryByText( '42' ) ).not.toBeInTheDocument();
+			expect( screen.queryByText( '99' ) ).not.toBeInTheDocument();
+
+			// Select first option — value (not label) goes into the route
+			const paramInput = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.keyDown( paramInput, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/42/prod/logs' );
+			} );
+		} );
+
+		it( 'supports mixed plain and labeled options', async () => {
+			const onNavigate = vi.fn();
+			const resolver = () => [ 'plain-val', { label: 'Labeled', value: 'lbl-val' } ];
+			const commands = [ cmd( { id: 'item', title: 'Item', route: '/items/:id' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'plain-val' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'Labeled' ) ).toBeInTheDocument();
+			} );
+		} );
+
+		it( 're-calls the resolver with search text during param selection', async () => {
+			const resolver = vi.fn().mockImplementation( ( _p: string, _s: unknown, search: string ) => {
+				if ( search === '' ) {
+					return [
+						{ label: 'Alpha App', value: '1' },
+						{ label: 'Beta App', value: '2' },
+					];
+				}
+				return [ { label: 'Beta App', value: '2' } ];
+			} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Initial options appear
+			await waitFor( () => {
+				expect( screen.getByText( 'Alpha App' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'Beta App' ) ).toBeInTheDocument();
+			} );
+
+			// Type into the param input to trigger search
+			const paramInput = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.change( paramInput, { target: { value: 'Beta' } } );
+
+			// Wait for the 300ms debounce + resolver call
+			await waitFor( () => {
+				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'Beta' );
+			} );
+		} );
+
+		it( 're-calls the resolver with empty search when the user clears the input', async () => {
+			const resolver = vi.fn().mockImplementation( ( _p: string, _s: unknown, search: string ) => {
+				if ( search === 'Beta' ) {
+					return [ { label: 'Beta App', value: '2' } ];
+				}
+				return [
+					{ label: 'Alpha App', value: '1' },
+					{ label: 'Beta App', value: '2' },
+				];
+			} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Alpha App' ) ).toBeInTheDocument();
+			} );
+
+			// Type to filter
+			const paramInput = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.change( paramInput, { target: { value: 'Beta' } } );
+
+			await waitFor( () => {
+				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'Beta' );
+			} );
+
+			// Clear the input — should re-call resolver with empty search
+			fireEvent.change( paramInput, { target: { value: '' } } );
+
+			await waitFor( () => {
+				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, '' );
 			} );
 		} );
 

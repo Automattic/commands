@@ -1,10 +1,22 @@
 import type { ReactNode } from 'react';
 
+/**
+ * A labeled value pairs a human-readable label with the underlying value
+ * that gets substituted into the route.
+ */
+export interface LabeledValue {
+	label: string;
+	value: string;
+}
+
+/** A single resolver option — either a plain string or a labeled value. */
+export type ResolvedOption = string | LabeledValue;
+
 export interface UnresolvedParam {
 	/** The param name (e.g. "env") */
 	name: string;
 	/** When the resolver returns an array, these are the options the user can pick from */
-	options?: string[];
+	options?: ResolvedOption[];
 }
 
 export interface ResolveRouteResult {
@@ -56,9 +68,11 @@ export interface Command {
 
 /**
  * A resolved param is either a final string value or an array of options
- * for the user to choose from inside the palette.
+ * for the user to choose from inside the palette. Each option can be a plain
+ * string or a `{ label, value }` object so the palette shows human-readable
+ * labels while substituting the underlying value into the route.
  */
-export type ResolvedParam = string | string[];
+export type ResolvedParam = string | ResolvedOption[];
 
 export interface CommandsProps {
 	/** Array of command definitions */
@@ -66,18 +80,20 @@ export interface CommandsProps {
 
 	/**
 	 * Resolves a single route variable at runtime.
-	 * Called once per `:param` in left-to-right order. Receives the param name
-	 * and a record of already-resolved values (both auto-resolved strings and
-	 * user-selected values from earlier params).
+	 * Called once per `:param` in left-to-right order. Receives the param name,
+	 * a record of already-resolved values, and the current search text typed
+	 * by the user (empty string on initial resolution).
 	 *
 	 * Return a string to auto-fill the param (the palette moves to the next
-	 * param immediately). Return an array of strings to show a sub-layer where
-	 * the user picks one. The resolver is called for the next param only after
-	 * the current one is resolved.
+	 * param immediately). Return an array to show a sub-layer where the user
+	 * picks one — each element can be a plain string or a `{ label, value }`
+	 * object. The resolver is re-called with updated search text as the user
+	 * types, enabling server-side filtering of large option sets.
 	 */
 	resolver?: (
 		param: string,
-		selections: Record< string, string >
+		selections: Record< string, string >,
+		search: string
 	) => ResolvedParam | Promise< ResolvedParam >;
 
 	/** Called when a route command is selected with the fully resolved path */
