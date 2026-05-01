@@ -296,11 +296,7 @@ describe( 'resolveRoute', () => {
 	/* --- search parameter support --- */
 
 	it( 'passes an empty search string by default', async () => {
-		const resolver = (
-			_param: string,
-			_selections: Record< string, string >,
-			search: string
-		) => {
+		const resolver = ( _param: string, _selections: Record< string, string >, search: string ) => {
 			expect( search ).toBe( '' );
 			return '42';
 		};

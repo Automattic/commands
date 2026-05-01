@@ -151,6 +151,8 @@ function Commands( {
 			if ( ! paramSelection ) {
 				return;
 			}
+			setParamSearch( '' );
+			searchGenRef.current += 1;
 			const current = paramSelection.pending[ 0 ];
 			const updatedPath = replaceRouteParam( paramSelection.path, current.name, value );
 			const remaining = paramSelection.pending.slice( 1 );
@@ -209,12 +211,6 @@ function Commands( {
 
 	const currentParam = paramSelection?.pending[ 0 ] ?? null;
 
-	// Reset search when the active param changes (e.g. after selecting an option).
-	const currentParamName = currentParam?.name;
-	useEffect( () => {
-		setParamSearch( '' );
-	}, [ currentParamName ] );
-
 	// Debounced search: re-call the resolver for the current param when the
 	// user types during param selection, enabling server-side filtering.
 	useEffect( () => {
@@ -254,9 +250,7 @@ function Commands( {
 					// eslint-disable-next-line no-console
 					console.error( '[@automattic/commands] Search resolution failed:', error );
 					setResolving( false );
-					setResolveError(
-						error instanceof Error ? error.message : 'Search resolution failed'
-					);
+					setResolveError( error instanceof Error ? error.message : 'Search resolution failed' );
 				} );
 		}, 300 );
 
