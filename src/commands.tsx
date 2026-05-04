@@ -1,6 +1,6 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { Root as VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Command as CommandPrimitive } from 'cmdk';
+import { Command as CommandPrimitive, useCommandState } from 'cmdk';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { CommandListContent } from './command-list-content';
@@ -37,6 +37,29 @@ function SearchIcon() {
 	);
 }
 
+interface ResultCountAnnouncementProps {
+	itemLabel: string;
+	silent: boolean;
+}
+
+function ResultCountAnnouncement( { itemLabel, silent }: ResultCountAnnouncementProps ) {
+	const count = useCommandState( state => state.filtered.count );
+	const label = count === 1 ? itemLabel : `${ itemLabel }s`;
+	let message = `${ count } ${ label } found.`;
+
+	if ( silent ) {
+		message = '';
+	} else if ( count === 0 ) {
+		message = `No ${ itemLabel }s found.`;
+	}
+
+	return (
+		<VisuallyHidden role="status" aria-live="polite" aria-atomic="true">
+			{ message }
+		</VisuallyHidden>
+	);
+}
+
 /* ---------- Commands component ---------- */
 
 function Commands( {
@@ -56,6 +79,7 @@ function Commands( {
 	const [ resolveError, setResolveError ] = useState< string | null >( null );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
 	const [ paramSearch, setParamSearch ] = useState( '' );
+	const previousFocusRef = useRef< HTMLElement | null >( null );
 	const resolveGenRef = useRef( 0 );
 	const searchGenRef = useRef( 0 );
 	const isInitialSearchRef = useRef( true );
@@ -63,6 +87,29 @@ function Commands( {
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
+
+	useEffect( () => {
+		if ( open ) {
+			return;
+		}
+
+		const previousFocus = previousFocusRef.current;
+		previousFocusRef.current = null;
+
+		if ( ! previousFocus?.isConnected ) {
+			return;
+		}
+
+		const timeoutId = window.setTimeout( () => {
+			if ( previousFocus.isConnected ) {
+				previousFocus.focus();
+			}
+		}, 0 );
+
+		return () => {
+			window.clearTimeout( timeoutId );
+		};
+	}, [ open ] );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
 	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
@@ -80,14 +127,23 @@ function Commands( {
 		setParamSearch( '' );
 	}, [] );
 
+	const closePalette = useCallback( () => {
+		setOpen( false );
+	}, [] );
+
 	const handleOpenChange = useCallback(
 		( next: boolean ) => {
-			setOpen( next );
-			if ( ! next ) {
-				resetParamSelection();
+			if ( next ) {
+				previousFocusRef.current =
+					document.activeElement instanceof HTMLElement ? document.activeElement : null;
+				setOpen( true );
+				return;
 			}
+
+			closePalette();
+			resetParamSelection();
 		},
-		[ resetParamSelection ]
+		[ closePalette, resetParamSelection ]
 	);
 
 	useHotkey( triggerKey, () => handleOpenChange( ! open ) );
@@ -95,10 +151,10 @@ function Commands( {
 	const completeNavigation = useCallback(
 		( path: string ) => {
 			onNavigate?.( path );
-			setOpen( false );
+			closePalette();
 			resetParamSelection();
 		},
-		[ onNavigate, resetParamSelection ]
+		[ closePalette, onNavigate, resetParamSelection ]
 	);
 
 	const handleSelect = useCallback(
@@ -142,10 +198,10 @@ function Commands( {
 					} );
 			} else {
 				item.action?.();
-				setOpen( false );
+				closePalette();
 			}
 		},
-		[ addRecent, completeNavigation, resolver, showRecent ]
+		[ addRecent, closePalette, completeNavigation, resolver, showRecent ]
 	);
 
 	const handleParamOptionSelect = useCallback(
@@ -269,12 +325,13 @@ function Commands( {
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when paramSearch changes
 	}, [ paramSearch ] );
 
-	let placeholderText = currentParam
+	const inputLabel = currentParam ? `Select ${ currentParam.name }` : 'Search commands';
+	let inputPlaceholder = currentParam
 		? `Select ${ currentParam.name }. Backspace to cancel.`
 		: placeholder;
 
 	if ( resolveError ) {
-		placeholderText = 'Route resolution failed. Backspace to cancel.';
+		inputPlaceholder = 'Route resolution failed. Backspace to cancel.';
 	}
 
 	return (
@@ -282,9 +339,7 @@ function Commands( {
 			key={ currentParam?.name ?? 'commands' }
 			open={ open }
 			onOpenChange={ handleOpenChange }
-			label={
-				currentParam ? `Select ${ currentParam.name }. Backspace to cancel.` : 'Command palette'
-			}
+			label={ inputLabel }
 			filter={ paramSelection ? undefined : filter }
 			loop
 		>
@@ -292,15 +347,20 @@ function Commands( {
 				<Dialog.Title>Command palette</Dialog.Title>
 				<Dialog.Description>Search and run commands</Dialog.Description>
 			</VisuallyHidden>
+			<ResultCountAnnouncement
+				itemLabel={ currentParam ? 'option' : 'command' }
+				silent={ resolving || Boolean( resolveError ) }
+			/>
 			<div { ...themeAttributes.inputWrapper }>
 				<SearchIcon />
 				<CommandPrimitive.Input
-					placeholder={ placeholderText }
+					aria-label={ inputLabel }
+					placeholder={ inputPlaceholder }
 					onKeyDown={ paramSelection || resolveError ? handleParamKeyDown : undefined }
 					onValueChange={ paramSelection ? setParamSearch : undefined }
 				/>
 			</div>
-			<CommandPrimitive.List>
+			<CommandPrimitive.List aria-busy={ resolving || undefined }>
 				<CommandListContent
 					resolving={ resolving }
 					resolveError={ resolveError }
