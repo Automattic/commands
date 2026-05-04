@@ -16,13 +16,13 @@ The repo is currently a buildable, testable, publishable skeleton. `src/index.ts
 - **Lint**: ESLint 9 flat config via `@automattic/eslint-plugin-wpvip` (recommended preset)
 - **Format**: `wp-prettier` (tabs, single quotes, spaces inside brackets)
 - **Package manager**: **pnpm** (pinned via `packageManager: pnpm@10.14.0`). Do not use npm or yarn.
-- **Node**: 22 from `.nvmrc`
+- **Node**: 24 from `.nvmrc`
 
 ## Setup
 
-This repo pins Node 22 (`.nvmrc`) and pnpm 10.14.0 (`packageManager` in `package.json`).
+This repo pins Node 24 (`.nvmrc`) and pnpm 10.14.0 (`packageManager` in `package.json`).
 
-1. Activate Node 22:
+1. Activate Node 24:
    - nvm: `nvm use`
    - fnm: `fnm use`
 2. Make pnpm available via Corepack (once per Node version):
@@ -51,7 +51,7 @@ This repo pins Node 22 (`.nvmrc`) and pnpm 10.14.0 (`packageManager` in `package
 src/                   Library source and co-located tests
 playground/
   vite.config.ts       Aliases @automattic/commands to src/ or dist/ via --mode
-.nvmrc                 Pins Node 22
+.nvmrc                 Pins Node 24
 .prettierrc            Extends wp-prettier
 eslint.config.js       ESLint 9 flat config
 tsconfig.build.json    Library-only, used by tsup
