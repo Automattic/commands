@@ -39,6 +39,7 @@
     "format:check": "prettier --check .",
     "release:prepare": "node ./bin/prepare-release.mjs",
     "test": "vitest run",
+    "prepare": "pnpm build",
     "test:watch": "vitest"
   },
   "keywords": [
