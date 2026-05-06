@@ -28,15 +28,6 @@ export interface ResolveRouteResult {
 	selections: Record< string, string >;
 }
 
-export interface ParamSelectionState {
-	/** The partially-resolved route path */
-	path: string;
-	/** Queue of params that still need a user selection */
-	pending: UnresolvedParam[];
-	/** Accumulated user selections so far (param name → selected value) */
-	selections: Record< string, string >;
-}
-
 export interface Command {
 	/** Unique identifier (also used for recency tracking) */
 	id: string;
@@ -65,6 +56,52 @@ export interface Command {
 	/** Keyboard shortcut hint shown in UI: "⌘L" */
 	shortcut?: string;
 }
+
+export interface ParamSelectionState {
+	/** The command currently being resolved */
+	command: Command;
+	/** The partially-resolved route path */
+	path: string;
+	/** Queue of params that still need a user selection */
+	pending: UnresolvedParam[];
+	/** Accumulated user selections so far (param name → selected value) */
+	selections: Record< string, string >;
+}
+
+interface BaseCommandPaletteEvent {
+	type: 'open' | 'execute' | 'resolve_error';
+}
+
+interface OpenCommandPaletteEvent extends BaseCommandPaletteEvent {
+	type: 'open';
+}
+
+interface BaseCommandExecuteEvent extends BaseCommandPaletteEvent {
+	type: 'execute';
+	command: Command;
+	commandType: 'route' | 'action';
+}
+
+interface CommandNavigationExecuteEvent extends BaseCommandExecuteEvent {
+	commandType: 'route';
+	path: string;
+}
+
+interface CommandActionExecuteEvent extends BaseCommandExecuteEvent {
+	commandType: 'action';
+}
+
+interface CommandResolveErrorEvent extends BaseCommandPaletteEvent {
+	type: 'resolve_error';
+	command: Command;
+	error: unknown;
+}
+
+export type CommandPaletteEvent =
+	| OpenCommandPaletteEvent
+	| CommandNavigationExecuteEvent
+	| CommandActionExecuteEvent
+	| CommandResolveErrorEvent;
 
 /**
  * A resolved param is either a final string value or an array of options
@@ -98,6 +135,9 @@ export interface CommandsProps {
 
 	/** Called when a route command is selected with the fully resolved path */
 	onNavigate?: ( path: string ) => void;
+
+	/** Called when the palette opens, a command executes, or route resolution fails */
+	onEvent?: ( event: CommandPaletteEvent ) => void;
 
 	/**
 	 * Keyboard shortcut to open the palette. Default: `"Mod+k"`

@@ -80,6 +80,7 @@ Props for the `<Commands />` component.
 | `commands`         | `Command[]`                                                                                      | —                               | Array of command definitions.                                                                                                                   |
 | `resolver`         | `(param: string, selections: Record<string, string>) => ResolvedParam \| Promise<ResolvedParam>` | —                               | Resolves route `:param` variables one at a time. See [Resolver pattern](#resolver-pattern).                                                     |
 | `onNavigate`       | `(path: string) => void`                                                                         | —                               | Called with the fully resolved path when a route command is selected.                                                                           |
+| `onEvent`          | `(event: CommandPaletteEvent) => void`                                                           | —                               | Called when the palette opens, a command executes, or route resolution fails.                                                                   |
 | `triggerKey`       | `string`                                                                                         | `"Mod+k"`                       | Keyboard shortcut to toggle the palette. `Mod` maps to Cmd on macOS, Ctrl elsewhere. Modifiers are `+`-separated: `"Meta+k"`, `"Ctrl+Shift+p"`. |
 | `placeholder`      | `string`                                                                                         | `"Search commands..."`          | Placeholder text for the search input.                                                                                                          |
 | `filter`           | `(value: string, search: string) => number`                                                      | cmdk built-in                   | Custom scoring function. Return 0 to hide, 1 to rank highest.                                                                                   |
@@ -87,6 +88,32 @@ Props for the `<Commands />` component.
 | `showRecent`       | `boolean`                                                                                        | `true`                          | Show recently selected commands when the search input is empty.                                                                                 |
 | `recentLimit`      | `number`                                                                                         | `5`                             | Maximum number of recent commands to display.                                                                                                   |
 | `recentStorageKey` | `string`                                                                                         | `"@automattic/commands:recent"` | `localStorage` key for persisting recent commands.                                                                                              |
+
+### `CommandPaletteEvent`
+
+`onEvent` receives lifecycle events that consumers can use for analytics without
+depending on internal component state.
+
+```ts
+type CommandPaletteEvent =
+	| { type: 'open' }
+	| {
+			type: 'execute';
+			command: Command;
+			commandType: 'route';
+			path: string;
+	  }
+	| {
+			type: 'execute';
+			command: Command;
+			commandType: 'action';
+	  }
+	| {
+			type: 'resolve_error';
+			command: Command;
+			error: unknown;
+	  };
+```
 
 ### Utility exports
 
@@ -107,6 +134,7 @@ import { resolveRoute, extractParams, replaceRouteParam } from '@automattic/comm
 ```ts
 import type {
 	Command,
+	CommandPaletteEvent,
 	CommandsProps,
 	ResolvedParam,
 	ResolveRouteResult,
