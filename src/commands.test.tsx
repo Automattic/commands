@@ -169,6 +169,160 @@ describe( 'Commands', () => {
 		} );
 	} );
 
+	/* --- events --- */
+
+	describe( 'events', () => {
+		it( 'emits an open event when the palette opens', async () => {
+			const onEvent = vi.fn();
+
+			render( <Commands commands={ mixedCommands } triggerKey="Meta+k" onEvent={ onEvent } /> );
+			await openPaletteAndWait();
+
+			expect( onEvent ).toHaveBeenCalledTimes( 1 );
+			expect( onEvent ).toHaveBeenCalledWith( { type: 'open' } );
+		} );
+
+		it( 'emits an execute event for action commands', async () => {
+			const action = vi.fn();
+			const onEvent = vi.fn();
+			const command = cmd( {
+				id: 'toggle-theme',
+				title: 'Toggle Theme',
+				action,
+				route: undefined,
+			} );
+
+			render( <Commands commands={ [ command ] } triggerKey="Meta+k" onEvent={ onEvent } /> );
+			await openPaletteAndWait();
+			onEvent.mockClear();
+
+			fireEvent.click( screen.getByText( 'Toggle Theme' ) );
+
+			await waitFor( () => {
+				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
+			} );
+			expect( action ).toHaveBeenCalledTimes( 1 );
+			expect( onEvent ).toHaveBeenCalledWith( {
+				type: 'execute',
+				command,
+				commandType: 'action',
+			} );
+		} );
+
+		it( 'emits an execute event for resolved route commands', async () => {
+			const onEvent = vi.fn();
+			const onNavigate = vi.fn();
+			const resolver = () => '42';
+			const command = cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } );
+
+			render(
+				<Commands
+					commands={ [ command ] }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+					onEvent={ onEvent }
+				/>
+			);
+			await openPaletteAndWait();
+			onEvent.mockClear();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/42/logs' );
+			} );
+			expect( onEvent ).toHaveBeenCalledWith( {
+				type: 'execute',
+				command,
+				commandType: 'route',
+				path: '/apps/42/logs',
+			} );
+		} );
+
+		it( 'emits an execute event with selected route params', async () => {
+			const onEvent = vi.fn();
+			const onNavigate = vi.fn();
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return '42';
+				}
+				return [ 'production', 'staging' ];
+			};
+			const command = cmd( {
+				id: 'audit',
+				title: 'Audit',
+				route: '/apps/:appId/:env/audit',
+			} );
+
+			render(
+				<Commands
+					commands={ [ command ] }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onNavigate={ onNavigate }
+					onEvent={ onEvent }
+				/>
+			);
+			await openPaletteAndWait();
+			onEvent.mockClear();
+
+			let input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( onNavigate ).toHaveBeenCalledWith( '/apps/42/production/audit' );
+			} );
+			expect( onEvent ).toHaveBeenCalledWith( {
+				type: 'execute',
+				command,
+				commandType: 'route',
+				path: '/apps/42/production/audit',
+			} );
+		} );
+
+		it( 'emits a resolve error event when route resolution fails', async () => {
+			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+			const onEvent = vi.fn();
+			const error = new Error( 'boom' );
+			const resolver = (): Promise< string > => Promise.reject( error );
+			const command = cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } );
+
+			render(
+				<Commands
+					commands={ [ command ] }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					onEvent={ onEvent }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+			onEvent.mockClear();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByRole( 'alert' ) ).toHaveTextContent( 'boom' );
+			} );
+			expect( onEvent ).toHaveBeenCalledWith( {
+				type: 'resolve_error',
+				command,
+				error,
+			} );
+			errorSpy.mockRestore();
+		} );
+	} );
+
 	/* --- rendering --- */
 
 	describe( 'rendering', () => {
@@ -1316,25 +1470,29 @@ describe( 'Commands', () => {
 
 		it( 'shows the error when a dependent param resolver rejects', async () => {
 			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+			const onEvent = vi.fn();
 			const onNavigate = vi.fn();
+			const error = new Error( 'Cannot load env' );
 			const resolver = ( param: string ): Promise< string | string[] > | string[] => {
 				if ( param === 'appId' ) {
 					return [ 'good-app', 'bad-app' ];
 				}
-				return Promise.reject( new Error( 'Cannot load env' ) );
+				return Promise.reject( error );
 			};
-			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+			const command = cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } );
 
 			render(
 				<Commands
-					commands={ commands }
+					commands={ [ command ] }
 					triggerKey="Meta+k"
 					resolver={ resolver }
 					onNavigate={ onNavigate }
+					onEvent={ onEvent }
 					showRecent={ false }
 				/>
 			);
 			await openPaletteAndWait();
+			onEvent.mockClear();
 
 			// Select the command
 			const input = screen.getByPlaceholderText( 'Search commands...' );
@@ -1355,6 +1513,11 @@ describe( 'Commands', () => {
 
 			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
 			expect( onNavigate ).not.toHaveBeenCalled();
+			expect( onEvent ).toHaveBeenCalledWith( {
+				type: 'resolve_error',
+				command,
+				error,
+			} );
 			errorSpy.mockRestore();
 		} );
 

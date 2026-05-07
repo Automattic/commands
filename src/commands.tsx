@@ -70,6 +70,7 @@ function Commands( {
 	emptyState,
 	triggerKey = 'Mod+k',
 	onNavigate,
+	onEvent,
 	showRecent = true,
 	recentLimit,
 	recentStorageKey,
@@ -131,11 +132,35 @@ function Commands( {
 		setOpen( false );
 	}, [] );
 
+	const emitNavigationExecuteEvent = useCallback(
+		( command: Command, path: string ) => {
+			onEvent?.( { type: 'execute', command, commandType: 'route', path } );
+		},
+		[ onEvent ]
+	);
+
+	const emitActionExecuteEvent = useCallback(
+		( command: Command ) => {
+			onEvent?.( { type: 'execute', command, commandType: 'action' } );
+		},
+		[ onEvent ]
+	);
+
+	const emitResolveErrorEvent = useCallback(
+		( command: Command, error: unknown ) => {
+			onEvent?.( { type: 'resolve_error', command, error } );
+		},
+		[ onEvent ]
+	);
+
 	const handleOpenChange = useCallback(
 		( next: boolean ) => {
 			if ( next ) {
 				previousFocusRef.current =
 					document.activeElement instanceof HTMLElement ? document.activeElement : null;
+				if ( ! open ) {
+					onEvent?.( { type: 'open' } );
+				}
 				setOpen( true );
 				return;
 			}
@@ -143,18 +168,19 @@ function Commands( {
 			closePalette();
 			resetParamSelection();
 		},
-		[ closePalette, resetParamSelection ]
+		[ closePalette, onEvent, open, resetParamSelection ]
 	);
 
 	useHotkey( triggerKey, () => handleOpenChange( ! open ) );
 
 	const completeNavigation = useCallback(
-		( path: string ) => {
+		( path: string, command: Command ) => {
+			emitNavigationExecuteEvent( command, path );
 			onNavigate?.( path );
 			closePalette();
 			resetParamSelection();
 		},
-		[ closePalette, onNavigate, resetParamSelection ]
+		[ closePalette, emitNavigationExecuteEvent, onNavigate, resetParamSelection ]
 	);
 
 	const handleSelect = useCallback(
@@ -165,7 +191,7 @@ function Commands( {
 
 			if ( item.route ) {
 				if ( extractParams( item.route ).length === 0 ) {
-					completeNavigation( item.route );
+					completeNavigation( item.route, item );
 					return;
 				}
 
@@ -178,9 +204,10 @@ function Commands( {
 						}
 						setResolving( false );
 						if ( result.unresolved.length === 0 ) {
-							completeNavigation( result.path );
+							completeNavigation( result.path, item );
 						} else {
 							setParamSelection( {
+								command: item,
 								path: result.path,
 								pending: result.unresolved,
 								selections: result.selections,
@@ -193,15 +220,27 @@ function Commands( {
 						}
 						// eslint-disable-next-line no-console
 						console.error( '[@automattic/commands] Route resolution failed:', error );
+						emitResolveErrorEvent( item, error );
 						setResolving( false );
 						setResolveError( error instanceof Error ? error.message : 'Route resolution failed' );
 					} );
 			} else {
-				item.action?.();
+				if ( item.action ) {
+					item.action();
+					emitActionExecuteEvent( item );
+				}
 				closePalette();
 			}
 		},
-		[ addRecent, closePalette, completeNavigation, resolver, showRecent ]
+		[
+			addRecent,
+			closePalette,
+			completeNavigation,
+			emitActionExecuteEvent,
+			emitResolveErrorEvent,
+			resolver,
+			showRecent,
+		]
 	);
 
 	const handleParamOptionSelect = useCallback(
@@ -218,7 +257,7 @@ function Commands( {
 			const updatedSelections = { ...paramSelection.selections, [ current.name ]: value };
 
 			if ( remaining.length === 0 ) {
-				completeNavigation( updatedPath );
+				completeNavigation( updatedPath, paramSelection.command );
 				return;
 			}
 
@@ -232,9 +271,10 @@ function Commands( {
 					}
 					setResolving( false );
 					if ( result.unresolved.length === 0 ) {
-						completeNavigation( result.path );
+						completeNavigation( result.path, paramSelection.command );
 					} else {
 						setParamSelection( {
+							command: paramSelection.command,
 							path: result.path,
 							pending: result.unresolved,
 							selections: result.selections,
@@ -247,11 +287,12 @@ function Commands( {
 					}
 					// eslint-disable-next-line no-console
 					console.error( '[@automattic/commands] Route resolution failed:', error );
+					emitResolveErrorEvent( paramSelection.command, error );
 					setResolving( false );
 					setResolveError( error instanceof Error ? error.message : 'Route resolution failed' );
 				} );
 		},
-		[ paramSelection, completeNavigation, resolver ]
+		[ paramSelection, completeNavigation, emitResolveErrorEvent, resolver ]
 	);
 
 	const handleParamKeyDown = useCallback(
