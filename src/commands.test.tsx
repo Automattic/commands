@@ -1289,7 +1289,7 @@ describe( 'Commands', () => {
 	/* --- loading state --- */
 
 	describe( 'loading state', () => {
-		it( 'shows a loading indicator while the resolver is running', async () => {
+		it( 'shows a spinner while the resolver is running and keeps existing items visible', async () => {
 			let finish: ( value: string ) => void = () => {};
 			const resolver = () =>
 				new Promise< string >( resolve => {
@@ -1297,7 +1297,14 @@ describe( 'Commands', () => {
 				} );
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
-			render( <Commands commands={ commands } triggerKey="Meta+k" resolver={ resolver } /> );
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
 			openPalette();
 
 			await waitFor( () => {
@@ -1307,23 +1314,27 @@ describe( 'Commands', () => {
 			const input = screen.getByPlaceholderText( 'Search commands...' );
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
-			// Loading indicator visible while resolver is pending
+			// Spinner visible while resolver is pending
 			await waitFor( () => {
-				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+				expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
 			} );
 			expect( screen.getByRole( 'listbox', { name: 'Suggestions' } ) ).toHaveAttribute(
 				'aria-busy',
 				'true'
 			);
-			expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
 			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
+
+			// Existing items remain visible during loading
+			expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
 
 			// Resolve the promise
 			finish( '42' );
 
-			// Loading indicator disappears
+			// Spinner disappears
 			await waitFor( () => {
-				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+				expect(
+					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+				).not.toBeInTheDocument();
 			} );
 		} );
 
@@ -1357,7 +1368,9 @@ describe( 'Commands', () => {
 			} );
 
 			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
-			expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+			expect(
+				screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+			).not.toBeInTheDocument();
 			expect( onNavigate ).not.toHaveBeenCalled();
 			expect( errorSpy ).toHaveBeenCalledWith(
 				'[@automattic/commands] Route resolution failed:',
@@ -1513,7 +1526,7 @@ describe( 'Commands', () => {
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			await waitFor( () => {
-				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+				expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
 			} );
 
 			// Close the dialog while resolver is pending
@@ -1531,7 +1544,9 @@ describe( 'Commands', () => {
 
 			await waitFor( () => {
 				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
-				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+				expect(
+					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+				).not.toBeInTheDocument();
 			} );
 			expect( onNavigate ).not.toHaveBeenCalled();
 		} );
@@ -1561,7 +1576,7 @@ describe( 'Commands', () => {
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			await waitFor( () => {
-				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+				expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
 			} );
 
 			// Close the dialog
@@ -1571,12 +1586,14 @@ describe( 'Commands', () => {
 				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
 			} );
 
-			// Reopen — should not show loading
+			// Reopen — should not show the spinner
 			openPalette();
 
 			await waitFor( () => {
 				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
-				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+				expect(
+					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+				).not.toBeInTheDocument();
 			} );
 		} );
 	} );

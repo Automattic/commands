@@ -61,6 +61,32 @@
 	flex-shrink: 0;
 }
 
+[cmdk-input-spinner] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	margin-left: var( --cmdk-input-icon-gap, 12px );
+	color: var( --cmdk-placeholder, var( --wpds-color-fg-content-neutral-subtle, #757575 ) );
+}
+
+[cmdk-input-spinner] svg {
+	margin-right: 0;
+	animation: cmdk-input-spinner-rotate 800ms linear infinite;
+}
+
+@keyframes cmdk-input-spinner-rotate {
+	to {
+		transform: rotate( 360deg );
+	}
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	[cmdk-input-spinner] svg {
+		animation: none;
+	}
+}
+
 [cmdk-input] {
 	width: 100%;
 	border: none;

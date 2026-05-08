@@ -12,7 +12,6 @@ const themeAttributes = {
 } as const;
 
 export function CommandListContent( {
-	resolving,
 	resolveError,
 	paramSelection,
 	currentParam,
@@ -25,10 +24,6 @@ export function CommandListContent( {
 }: CommandListContentProps ) {
 	const search = useCommandState( state => state.search );
 	const shouldShowRecent = showRecent && search === '' && recentCommands.length > 0;
-
-	if ( resolving ) {
-		return <CommandPrimitive.Loading>Loading...</CommandPrimitive.Loading>;
-	}
 
 	if ( resolveError ) {
 		return (

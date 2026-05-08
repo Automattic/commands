@@ -169,7 +169,6 @@ export interface CommandsProps {
 }
 
 export interface CommandListContentProps {
-	resolving: boolean;
 	resolveError: string | null;
 	paramSelection: ParamSelectionState | null;
 	currentParam: UnresolvedParam | null;
