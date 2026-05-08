@@ -112,11 +112,28 @@ interface OptionItemProps {
 function OptionItem( { option, onSelect }: OptionItemProps ) {
 	const label = optionLabel( option );
 	const value = optionValue( option );
+	const isLabeled = typeof option !== 'string';
+	const icon = isLabeled ? option.icon : undefined;
+	const description = isLabeled ? option.description : undefined;
+	const extraKeywords = isLabeled ? ( option.keywords ?? [] ) : [];
+	const keywords = [ label, ...extraKeywords ];
 
 	return (
-		<CommandPrimitive.Item value={ `${ label }:${ value }` } onSelect={ () => onSelect( value ) }>
+		<CommandPrimitive.Item
+			value={ `${ label }:${ value }` }
+			keywords={ keywords }
+			onSelect={ () => onSelect( value ) }
+		>
+			{ icon && (
+				<span { ...themeAttributes.itemIcon } aria-hidden="true">
+					{ icon }
+				</span>
+			) }
 			<span { ...themeAttributes.itemContent }>
 				<span { ...themeAttributes.itemTitle }>{ label }</span>
+				{ description && (
+					<span { ...themeAttributes.itemDescription }>{ description }</span>
+				) }
 			</span>
 		</CommandPrimitive.Item>
 	);

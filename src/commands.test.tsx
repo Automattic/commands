@@ -1170,6 +1170,75 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'renders icon and description on labeled options', async () => {
+			const resolver = () => [
+				{
+					label: 'My App',
+					value: '42',
+					description: 'apps.example.com/my-app',
+					icon: <span data-testid="opt-icon">★</span>,
+				},
+			];
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'My App' ) ).toBeInTheDocument();
+			} );
+
+			const item = screen.getByText( 'My App' ).closest( '[cmdk-item]' ) as HTMLElement;
+			expect( item.querySelector( '[cmdk-item-icon]' ) ).toHaveAttribute( 'aria-hidden', 'true' );
+			expect( within( item ).getByTestId( 'opt-icon' ) ).toBeInTheDocument();
+			expect( item.querySelector( '[cmdk-item-description]' ) ).toHaveTextContent(
+				'apps.example.com/my-app'
+			);
+		} );
+
+		it( 'matches labeled option keywords during param search', async () => {
+			const resolver = () => [
+				{ label: 'Production', value: 'prod', keywords: [ 'live' ] },
+				{ label: 'Staging', value: 'stg' },
+			];
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/42/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Production' ) ).toBeInTheDocument();
+			} );
+
+			const paramInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.change( paramInput, { target: { value: 'live' } } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Production' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'Staging' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
 		it( 're-calls the resolver with search text during param selection', async () => {
 			const resolver = vi.fn().mockImplementation( ( _p: string, _s: unknown, search: string ) => {
 				if ( search === '' ) {

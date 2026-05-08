@@ -2,11 +2,16 @@ import type { ReactNode } from 'react';
 
 /**
  * A labeled value pairs a human-readable label with the underlying value
- * that gets substituted into the route.
+ * that gets substituted into the route. Optionally carries an icon, a
+ * secondary description line, and extra search keywords — mirroring the
+ * fields a top-level `Command` can carry.
  */
 export interface LabeledValue {
 	label: string;
 	value: string;
+	description?: string;
+	icon?: ReactNode;
+	keywords?: string[];
 }
 
 /** A single resolver option — either a plain string or a labeled value. */
