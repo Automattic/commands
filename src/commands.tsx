@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { Root as VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Command as CommandPrimitive, useCommandState } from 'cmdk';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { CommandListContent } from './command-list-content';
 import { groupCommands } from './group-commands';
@@ -10,12 +10,15 @@ import { useRecentCommands } from './hooks/use-recent-commands';
 import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
-import type { Command, CommandsProps, ParamSelectionState } from './types';
+import type { Command, CommandsProps, ParamSelectionState, ResolvedOption } from './types';
 import './theme.css';
 
 const themeAttributes = {
 	inputWrapper: { 'cmdk-input-wrapper': '' },
 	inputSpinner: { 'cmdk-input-spinner': '' },
+	breadcrumb: { 'cmdk-breadcrumb': '' },
+	breadcrumbItem: { 'cmdk-breadcrumb-item': '' },
+	breadcrumbSeparator: { 'cmdk-breadcrumb-separator': '' },
 } as const;
 
 function SearchIcon() {
@@ -53,6 +56,29 @@ function SpinnerIcon() {
 		>
 			<path d="M21 12a9 9 0 1 1-6.219-8.56" />
 		</svg>
+	);
+}
+
+interface BreadcrumbProps {
+	commandTitle: string;
+	steps: string[];
+}
+
+function Breadcrumb( { commandTitle, steps }: BreadcrumbProps ) {
+	const trail = [ commandTitle, ...steps ];
+	return (
+		<div { ...themeAttributes.breadcrumb } aria-label="Selection context">
+			{ trail.map( ( label, index ) => (
+				<Fragment key={ index }>
+					{ index > 0 && (
+						<span { ...themeAttributes.breadcrumbSeparator } aria-hidden="true">
+							/
+						</span>
+					) }
+					<span { ...themeAttributes.breadcrumbItem }>{ label }</span>
+				</Fragment>
+			) ) }
+		</div>
 	);
 }
 
@@ -230,6 +256,7 @@ function Commands( {
 								path: result.path,
 								pending: result.unresolved,
 								selections: result.selections,
+								breadcrumbs: [],
 							} );
 						}
 					} )
@@ -263,10 +290,12 @@ function Commands( {
 	);
 
 	const handleParamOptionSelect = useCallback(
-		( value: string ) => {
+		( option: ResolvedOption ) => {
 			if ( ! paramSelection ) {
 				return;
 			}
+			const value = typeof option === 'string' ? option : option.value;
+			const label = typeof option === 'string' ? option : option.label;
 			setParamSearch( '' );
 			searchGenRef.current += 1;
 			isInitialSearchRef.current = true;
@@ -274,6 +303,7 @@ function Commands( {
 			const updatedPath = replaceRouteParam( paramSelection.path, current.name, value );
 			const remaining = paramSelection.pending.slice( 1 );
 			const updatedSelections = { ...paramSelection.selections, [ current.name ]: value };
+			const updatedBreadcrumbs = [ ...paramSelection.breadcrumbs, label ];
 
 			if ( remaining.length === 0 ) {
 				completeNavigation( updatedPath, paramSelection.command );
@@ -297,6 +327,7 @@ function Commands( {
 							path: result.path,
 							pending: result.unresolved,
 							selections: result.selections,
+							breadcrumbs: updatedBreadcrumbs,
 						} );
 					}
 				} )
@@ -411,6 +442,12 @@ function Commands( {
 				itemLabel={ currentParam ? 'option' : 'command' }
 				silent={ resolving || Boolean( resolveError ) }
 			/>
+			{ paramSelection && ! resolveError && (
+				<Breadcrumb
+					commandTitle={ paramSelection.command.title }
+					steps={ paramSelection.breadcrumbs }
+				/>
+			) }
 			<div { ...themeAttributes.inputWrapper }>
 				<SearchIcon />
 				<CommandPrimitive.Input

@@ -71,6 +71,12 @@ export interface ParamSelectionState {
 	pending: UnresolvedParam[];
 	/** Accumulated user selections so far (param name → selected value) */
 	selections: Record< string, string >;
+	/**
+	 * Human-readable labels for params the user has already picked, in the
+	 * order they were picked. Drives the breadcrumb shown at the top of the
+	 * palette while later params are being chosen.
+	 */
+	breadcrumbs: string[];
 }
 
 interface BaseCommandPaletteEvent {
@@ -182,5 +188,5 @@ export interface CommandListContentProps {
 	recentCommands: Command[];
 	grouped: Map< string, Command[] >;
 	onSelect: ( item: Command ) => void;
-	onParamOptionSelect: ( value: string ) => void;
+	onParamOptionSelect: ( option: ResolvedOption ) => void;
 }

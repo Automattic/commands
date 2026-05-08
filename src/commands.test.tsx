@@ -1325,6 +1325,125 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'shows the command title in a breadcrumb at the top during param selection', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ 'app-one', 'app-two' ];
+				}
+				return [ 'prod', 'dev' ];
+			};
+			const commands = [
+				cmd( { id: 'audit', title: 'Audit log', route: '/apps/:appId/:env/audit' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			// No breadcrumb on the initial command list
+			expect( screen.queryByLabelText( 'Selection context' ) ).not.toBeInTheDocument();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// First param: command title alone
+			await waitFor( () => {
+				expect( screen.getByLabelText( 'Selection context' ) ).toBeInTheDocument();
+			} );
+			let trail = screen.getByLabelText( 'Selection context' );
+			expect( within( trail ).getByText( 'Audit log' ) ).toBeInTheDocument();
+
+			// Pick app-one — breadcrumb should grow
+			fireEvent.click( screen.getByText( 'app-one' ) );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+			} );
+
+			trail = screen.getByLabelText( 'Selection context' );
+			expect( within( trail ).getByText( 'Audit log' ) ).toBeInTheDocument();
+			expect( within( trail ).getByText( 'app-one' ) ).toBeInTheDocument();
+		} );
+
+		it( 'uses the labeled-value label in the breadcrumb', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ { label: 'My App', value: '42' } ];
+				}
+				return [ 'prod' ];
+			};
+			const commands = [
+				cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			fireEvent.keyDown( screen.getByPlaceholderText( 'Search commands...' ), { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'My App' ) ).toBeInTheDocument();
+			} );
+
+			fireEvent.click( screen.getByText( 'My App' ) );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+			} );
+
+			const trail = screen.getByLabelText( 'Selection context' );
+			expect( within( trail ).getByText( 'My App' ) ).toBeInTheDocument();
+			expect( within( trail ).queryByText( '42' ) ).not.toBeInTheDocument();
+		} );
+
+		it( 'hides the breadcrumb when leaving param selection', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return '42';
+				}
+				return [ 'prod' ];
+			};
+			const commands = [
+				cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			fireEvent.keyDown( screen.getByPlaceholderText( 'Search commands...' ), { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByLabelText( 'Selection context' ) ).toBeInTheDocument();
+			} );
+
+			const paramInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( paramInput, { key: 'Backspace' } );
+
+			await waitFor( () => {
+				expect( screen.queryByLabelText( 'Selection context' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
 		it( 'shows the sub-layer when params are unresolved without options', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => [];

@@ -106,7 +106,7 @@ function optionValue( option: ResolvedOption ): string {
 
 interface OptionItemProps {
 	option: ResolvedOption;
-	onSelect: ( value: string ) => void;
+	onSelect: ( option: ResolvedOption ) => void;
 }
 
 function OptionItem( { option, onSelect }: OptionItemProps ) {
@@ -122,7 +122,7 @@ function OptionItem( { option, onSelect }: OptionItemProps ) {
 		<CommandPrimitive.Item
 			value={ `${ label }:${ value }` }
 			keywords={ keywords }
-			onSelect={ () => onSelect( value ) }
+			onSelect={ () => onSelect( option ) }
 		>
 			{ icon && (
 				<span { ...themeAttributes.itemIcon } aria-hidden="true">
