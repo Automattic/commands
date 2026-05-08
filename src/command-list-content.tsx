@@ -115,7 +115,7 @@ function OptionItem( { option, onSelect }: OptionItemProps ) {
 	const isLabeled = typeof option !== 'string';
 	const icon = isLabeled ? option.icon : undefined;
 	const description = isLabeled ? option.description : undefined;
-	const extraKeywords = isLabeled ? ( option.keywords ?? [] ) : [];
+	const extraKeywords = isLabeled ? option.keywords ?? [] : [];
 	const keywords = [ label, ...extraKeywords ];
 
 	return (
@@ -131,9 +131,7 @@ function OptionItem( { option, onSelect }: OptionItemProps ) {
 			) }
 			<span { ...themeAttributes.itemContent }>
 				<span { ...themeAttributes.itemTitle }>{ label }</span>
-				{ description && (
-					<span { ...themeAttributes.itemDescription }>{ description }</span>
-				) }
+				{ description && <span { ...themeAttributes.itemDescription }>{ description }</span> }
 			</span>
 		</CommandPrimitive.Item>
 	);
@@ -163,9 +161,7 @@ function CommandItem( { command, value = command.id, onSelect }: CommandItemProp
 					<span { ...themeAttributes.itemDescription }>{ command.description }</span>
 				) }
 			</span>
-			{ command.shortcut && (
-				<span { ...themeAttributes.itemShortcut }>{ command.shortcut }</span>
-			) }
+			{ command.shortcut && <span { ...themeAttributes.itemShortcut }>{ command.shortcut }</span> }
 		</CommandPrimitive.Item>
 	);
 }

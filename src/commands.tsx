@@ -5,6 +5,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 
 import { CommandListContent } from './command-list-content';
 import { groupCommands } from './group-commands';
+import { useFocusRestore } from './hooks/use-focus-restore';
 import { useHotkey } from './hooks/use-hotkey';
 import { useRecentCommands } from './hooks/use-recent-commands';
 import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
@@ -82,6 +83,28 @@ function Breadcrumb( { commandTitle, steps }: BreadcrumbProps ) {
 	);
 }
 
+function getInputCopy( {
+	currentParam,
+	resolveError,
+	placeholder,
+}: {
+	currentParam: { name: string } | null;
+	resolveError: string | null;
+	placeholder: string;
+} ): { label: string; placeholder: string } {
+	const label = currentParam ? `Select ${ currentParam.name }` : 'Search commands';
+
+	if ( resolveError ) {
+		return { label, placeholder: 'Route resolution failed. Backspace to cancel.' };
+	}
+
+	if ( currentParam ) {
+		return { label, placeholder: `Select ${ currentParam.name }. Backspace to cancel.` };
+	}
+
+	return { label, placeholder };
+}
+
 interface ResultCountAnnouncementProps {
 	itemLabel: string;
 	silent: boolean;
@@ -125,37 +148,14 @@ function Commands( {
 	const [ resolveError, setResolveError ] = useState< string | null >( null );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
 	const [ paramSearch, setParamSearch ] = useState( '' );
-	const previousFocusRef = useRef< HTMLElement | null >( null );
 	const resolveGenRef = useRef( 0 );
 	const searchGenRef = useRef( 0 );
 	const isInitialSearchRef = useRef( true );
+	const { captureFocus } = useFocusRestore( open );
 
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
-
-	useEffect( () => {
-		if ( open ) {
-			return;
-		}
-
-		const previousFocus = previousFocusRef.current;
-		previousFocusRef.current = null;
-
-		if ( ! previousFocus?.isConnected ) {
-			return;
-		}
-
-		const timeoutId = window.setTimeout( () => {
-			if ( previousFocus.isConnected ) {
-				previousFocus.focus();
-			}
-		}, 0 );
-
-		return () => {
-			window.clearTimeout( timeoutId );
-		};
-	}, [ open ] );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
 	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
@@ -201,8 +201,7 @@ function Commands( {
 	const handleOpenChange = useCallback(
 		( next: boolean ) => {
 			if ( next ) {
-				previousFocusRef.current =
-					document.activeElement instanceof HTMLElement ? document.activeElement : null;
+				captureFocus();
 				if ( ! open ) {
 					onEvent?.( { type: 'open' } );
 				}
@@ -213,7 +212,7 @@ function Commands( {
 			closePalette();
 			resetParamSelection();
 		},
-		[ closePalette, onEvent, open, resetParamSelection ]
+		[ captureFocus, closePalette, onEvent, open, resetParamSelection ]
 	);
 
 	useHotkey( triggerKey, () => handleOpenChange( ! open ) );
@@ -416,14 +415,11 @@ function Commands( {
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when paramSearch changes
 	}, [ paramSearch ] );
 
-	const inputLabel = currentParam ? `Select ${ currentParam.name }` : 'Search commands';
-	let inputPlaceholder = currentParam
-		? `Select ${ currentParam.name }. Backspace to cancel.`
-		: placeholder;
-
-	if ( resolveError ) {
-		inputPlaceholder = 'Route resolution failed. Backspace to cancel.';
-	}
+	const { label: inputLabel, placeholder: inputPlaceholder } = getInputCopy( {
+		currentParam,
+		resolveError,
+		placeholder,
+	} );
 
 	return (
 		<CommandPrimitive.Dialog
@@ -457,11 +453,7 @@ function Commands( {
 					onValueChange={ paramSelection ? setParamSearch : undefined }
 				/>
 				{ resolving && (
-					<span
-						{ ...themeAttributes.inputSpinner }
-						role="progressbar"
-						aria-label="Loading..."
-					>
+					<span { ...themeAttributes.inputSpinner } role="progressbar" aria-label="Loading...">
 						<SpinnerIcon />
 					</span>
 				) }

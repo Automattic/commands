@@ -1378,9 +1378,7 @@ describe( 'Commands', () => {
 				}
 				return [ 'prod' ];
 			};
-			const commands = [
-				cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ),
-			];
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
 
 			render(
 				<Commands
@@ -1416,9 +1414,7 @@ describe( 'Commands', () => {
 				}
 				return [ 'prod' ];
 			};
-			const commands = [
-				cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ),
-			];
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
 
 			render(
 				<Commands
@@ -1556,9 +1552,7 @@ describe( 'Commands', () => {
 			} );
 
 			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
-			expect(
-				screen.queryByRole( 'progressbar', { name: 'Loading...' } )
-			).not.toBeInTheDocument();
+			expect( screen.queryByRole( 'progressbar', { name: 'Loading...' } ) ).not.toBeInTheDocument();
 			expect( onNavigate ).not.toHaveBeenCalled();
 			expect( errorSpy ).toHaveBeenCalledWith(
 				'[@automattic/commands] Route resolution failed:',
