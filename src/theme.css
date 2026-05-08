@@ -160,19 +160,11 @@
 	white-space: nowrap;
 }
 
-[cmdk-item-type],
 [cmdk-item-shortcut] {
 	flex-shrink: 0;
 	font-size: var( --cmdk-item-meta-font-size, 12px );
 	line-height: var( --cmdk-item-meta-line-height, 16px );
 	font-family: inherit;
-}
-
-[cmdk-item-type] {
-	color: var( --cmdk-type-label, var( --wpds-color-fg-content-neutral-subtle, #646970 ) );
-}
-
-[cmdk-item-shortcut] {
 	color: var(
 		--cmdk-shortcut-text,
 		var( --cmdk-shortcut, var( --wpds-color-fg-content-neutral-subtle, #646970 ) )

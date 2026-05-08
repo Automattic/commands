@@ -8,7 +8,6 @@ const themeAttributes = {
 	itemTitle: { 'cmdk-item-title': '' },
 	itemDescription: { 'cmdk-item-description': '' },
 	itemShortcut: { 'cmdk-item-shortcut': '' },
-	itemType: { 'cmdk-item-type': '' },
 	error: { 'cmdk-error': '' },
 } as const;
 
@@ -137,7 +136,6 @@ interface CommandItemProps {
 }
 
 function CommandItem( { command, value = command.id, onSelect }: CommandItemProps ) {
-	const typeLabel = command.route ? 'Link' : 'Action';
 	const keywords = [ command.title, ...( command.keywords ?? [] ) ];
 
 	return (
@@ -153,10 +151,8 @@ function CommandItem( { command, value = command.id, onSelect }: CommandItemProp
 					<span { ...themeAttributes.itemDescription }>{ command.description }</span>
 				) }
 			</span>
-			{ command.shortcut ? (
+			{ command.shortcut && (
 				<span { ...themeAttributes.itemShortcut }>{ command.shortcut }</span>
-			) : (
-				<span { ...themeAttributes.itemType }>{ typeLabel }</span>
 			) }
 		</CommandPrimitive.Item>
 	);

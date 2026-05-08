@@ -447,49 +447,13 @@ describe( 'Commands', () => {
 			} );
 		} );
 
-		it( 'renders the type label with a cmdk attribute hook', async () => {
-			const commands = [ cmd( { id: 'route', title: 'Route command', route: '/route' } ) ];
-			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
-			openPalette();
-
-			await waitFor( () => {
-				expect( screen.getByText( 'Route command' ) ).toBeInTheDocument();
-			} );
-
-			const item = screen.getByText( 'Route command' ).closest( '[cmdk-item]' ) as HTMLElement;
-			expect( item.querySelector( '[cmdk-item-type]' ) ).toHaveTextContent( 'Link' );
-		} );
-
-		it( 'shows "Link" label for route commands', async () => {
-			const commands = [ cmd( { id: 'a', title: 'Route Cmd', route: '/go' } ) ];
-			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
-			openPalette();
-
-			await waitFor( () => {
-				expect( screen.getByText( 'Link' ) ).toBeInTheDocument();
-			} );
-		} );
-
-		it( 'shows "Action" label for action commands', async () => {
-			const commands = [
-				cmd( { id: 'a', title: 'Action Cmd', action: () => {}, route: undefined } ),
-			];
-			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
-			openPalette();
-
-			await waitFor( () => {
-				expect( screen.getByText( 'Action' ) ).toBeInTheDocument();
-			} );
-		} );
-
-		it( 'shows shortcut instead of type label when shortcut is set', async () => {
+		it( 'shows shortcut on the right side when shortcut is set', async () => {
 			const commands = [ cmd( { id: 'a', title: 'With Shortcut', route: '/go', shortcut: '⌘G' } ) ];
 			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
 			openPalette();
 
 			await waitFor( () => {
 				expect( screen.getByText( '⌘G' ) ).toBeInTheDocument();
-				expect( screen.queryByText( 'Link' ) ).not.toBeInTheDocument();
 			} );
 		} );
 	} );
@@ -1663,7 +1627,6 @@ describe( 'theme CSS contract', () => {
 			'--cmdk-shadow',
 			'--cmdk-radius',
 			'--cmdk-max-height',
-			'--cmdk-type-label',
 			'--cmdk-item-selected-indicator',
 		];
 
@@ -1682,11 +1645,7 @@ describe( 'theme CSS contract', () => {
 		);
 	} );
 
-	it( 'lets type labels and shortcut labels be themed independently', () => {
-		expect( themeCss ).toContain( '[cmdk-item-type]' );
-		expect( themeCss ).toContain(
-			'color: var( --cmdk-type-label, var( --wpds-color-fg-content-neutral-subtle, #646970 ) )'
-		);
+	it( 'exposes the shortcut text variable for theming', () => {
 		expect( themeCss ).toContain( '--cmdk-shortcut-text' );
 	} );
 
@@ -1704,7 +1663,6 @@ describe( 'theme CSS contract', () => {
 			'[cmdk-item-title]',
 			'[cmdk-item-description]',
 			'[cmdk-item-shortcut]',
-			'[cmdk-item-type]',
 			'[cmdk-empty]',
 			'[cmdk-loading]',
 			'[cmdk-error]',
