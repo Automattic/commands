@@ -8,10 +8,18 @@ import { groupCommands } from './group-commands';
 import { useFocusRestore } from './hooks/use-focus-restore';
 import { useHotkey } from './hooks/use-hotkey';
 import { useRecentCommands } from './hooks/use-recent-commands';
+import { mergeMessages } from './messages';
 import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
-import type { Command, CommandsProps, ParamSelectionState, ResolvedOption } from './types';
+import type {
+	Command,
+	CommandsMessages,
+	CommandsProps,
+	ParamSelectionState,
+	ResolvedOption,
+	ResultItemType,
+} from './types';
 import './theme.css';
 
 const themeAttributes = {
@@ -63,20 +71,21 @@ function SpinnerIcon() {
 interface BreadcrumbProps {
 	commandTitle: string;
 	steps: string[];
+	label: string;
 }
 
-function Breadcrumb( { commandTitle, steps }: BreadcrumbProps ) {
+function Breadcrumb( { commandTitle, steps, label }: BreadcrumbProps ) {
 	const trail = [ commandTitle, ...steps ];
 	return (
-		<div { ...themeAttributes.breadcrumb } aria-label="Selection context">
-			{ trail.map( ( label, index ) => (
+		<div { ...themeAttributes.breadcrumb } aria-label={ label }>
+			{ trail.map( ( itemLabel, index ) => (
 				<Fragment key={ index }>
 					{ index > 0 && (
 						<span { ...themeAttributes.breadcrumbSeparator } aria-hidden="true">
 							/
 						</span>
 					) }
-					<span { ...themeAttributes.breadcrumbItem }>{ label }</span>
+					<span { ...themeAttributes.breadcrumbItem }>{ itemLabel }</span>
 				</Fragment>
 			) ) }
 		</div>
@@ -87,38 +96,41 @@ function getInputCopy( {
 	currentParam,
 	resolveError,
 	placeholder,
+	messages,
 }: {
 	currentParam: { name: string } | null;
 	resolveError: string | null;
 	placeholder: string;
+	messages: CommandsMessages;
 } ): { label: string; placeholder: string } {
-	const label = currentParam ? `Select ${ currentParam.name }` : 'Search commands';
+	const label = currentParam
+		? messages.selectParamLabel( currentParam.name )
+		: messages.searchInputLabel;
 
 	if ( resolveError ) {
-		return { label, placeholder: 'Route resolution failed. Backspace to cancel.' };
+		return { label, placeholder: messages.routeResolutionFailedPlaceholder };
 	}
 
 	if ( currentParam ) {
-		return { label, placeholder: `Select ${ currentParam.name }. Backspace to cancel.` };
+		return { label, placeholder: messages.selectParamPlaceholder( currentParam.name ) };
 	}
 
 	return { label, placeholder };
 }
 
 interface ResultCountAnnouncementProps {
-	itemLabel: string;
+	itemType: ResultItemType;
+	messages: CommandsMessages;
 	silent: boolean;
 }
 
-function ResultCountAnnouncement( { itemLabel, silent }: ResultCountAnnouncementProps ) {
+function ResultCountAnnouncement( { itemType, messages, silent }: ResultCountAnnouncementProps ) {
 	const count = useCommandState( state => state.filtered.count );
-	const label = count === 1 ? itemLabel : `${ itemLabel }s`;
-	let message = `${ count } ${ label } found.`;
+	let message = '';
 
-	if ( silent ) {
-		message = '';
-	} else if ( count === 0 ) {
-		message = `No ${ itemLabel }s found.`;
+	if ( ! silent ) {
+		message =
+			count === 0 ? messages.noResultsCount( itemType ) : messages.resultCount( count, itemType );
 	}
 
 	return (
@@ -133,7 +145,8 @@ function ResultCountAnnouncement( { itemLabel, silent }: ResultCountAnnouncement
 function Commands( {
 	commands,
 	resolver,
-	placeholder = 'Search commands...',
+	placeholder,
+	messages,
 	filter,
 	emptyState,
 	triggerKey = 'Mod+k',
@@ -152,6 +165,9 @@ function Commands( {
 	const searchGenRef = useRef( 0 );
 	const isInitialSearchRef = useRef( true );
 	const { captureFocus } = useFocusRestore( open );
+	const mergedMessages = mergeMessages( messages );
+	const resolvedPlaceholder = placeholder ?? mergedMessages.searchPlaceholder;
+	const resolvedEmptyState = emptyState ?? mergedMessages.noResults;
 
 	useEffect( () => {
 		validateCommands( commands );
@@ -267,7 +283,9 @@ function Commands( {
 						console.error( '[@automattic/commands] Route resolution failed:', error );
 						emitResolveErrorEvent( item, error );
 						setResolving( false );
-						setResolveError( error instanceof Error ? error.message : 'Route resolution failed' );
+						setResolveError(
+							error instanceof Error ? error.message : mergedMessages.routeResolutionFailed
+						);
 					} );
 			} else {
 				if ( item.action ) {
@@ -283,6 +301,7 @@ function Commands( {
 			completeNavigation,
 			emitActionExecuteEvent,
 			emitResolveErrorEvent,
+			mergedMessages.routeResolutionFailed,
 			resolver,
 			showRecent,
 		]
@@ -338,10 +357,18 @@ function Commands( {
 					console.error( '[@automattic/commands] Route resolution failed:', error );
 					emitResolveErrorEvent( paramSelection.command, error );
 					setResolving( false );
-					setResolveError( error instanceof Error ? error.message : 'Route resolution failed' );
+					setResolveError(
+						error instanceof Error ? error.message : mergedMessages.routeResolutionFailed
+					);
 				} );
 		},
-		[ paramSelection, completeNavigation, emitResolveErrorEvent, resolver ]
+		[
+			paramSelection,
+			completeNavigation,
+			emitResolveErrorEvent,
+			mergedMessages.routeResolutionFailed,
+			resolver,
+		]
 	);
 
 	const handleParamKeyDown = useCallback(
@@ -407,7 +434,9 @@ function Commands( {
 					// eslint-disable-next-line no-console
 					console.error( '[@automattic/commands] Search resolution failed:', error );
 					setResolving( false );
-					setResolveError( error instanceof Error ? error.message : 'Search resolution failed' );
+					setResolveError(
+						error instanceof Error ? error.message : mergedMessages.searchResolutionFailed
+					);
 				} );
 		}, 300 );
 
@@ -418,7 +447,8 @@ function Commands( {
 	const { label: inputLabel, placeholder: inputPlaceholder } = getInputCopy( {
 		currentParam,
 		resolveError,
-		placeholder,
+		placeholder: resolvedPlaceholder,
+		messages: mergedMessages,
 	} );
 
 	return (
@@ -431,17 +461,19 @@ function Commands( {
 			loop
 		>
 			<VisuallyHidden>
-				<Dialog.Title>Command palette</Dialog.Title>
-				<Dialog.Description>Search and run commands</Dialog.Description>
+				<Dialog.Title>{ mergedMessages.dialogTitle }</Dialog.Title>
+				<Dialog.Description>{ mergedMessages.dialogDescription }</Dialog.Description>
 			</VisuallyHidden>
 			<ResultCountAnnouncement
-				itemLabel={ currentParam ? 'option' : 'command' }
+				itemType={ currentParam ? 'option' : 'command' }
+				messages={ mergedMessages }
 				silent={ resolving || Boolean( resolveError ) }
 			/>
 			{ paramSelection && ! resolveError && (
 				<Breadcrumb
 					commandTitle={ paramSelection.command.title }
 					steps={ paramSelection.breadcrumbs }
+					label={ mergedMessages.selectionContext }
 				/>
 			) }
 			<div { ...themeAttributes.inputWrapper }>
@@ -453,22 +485,30 @@ function Commands( {
 					onValueChange={ paramSelection ? setParamSearch : undefined }
 				/>
 				{ resolving && (
-					<span { ...themeAttributes.inputSpinner } role="progressbar" aria-label="Loading...">
+					<span
+						{ ...themeAttributes.inputSpinner }
+						role="progressbar"
+						aria-label={ mergedMessages.loading }
+					>
 						<SpinnerIcon />
 					</span>
 				) }
 			</div>
-			<CommandPrimitive.List aria-busy={ resolving || undefined }>
+			<CommandPrimitive.List
+				aria-busy={ resolving || undefined }
+				label={ mergedMessages.commandListLabel }
+			>
 				<CommandListContent
 					resolveError={ resolveError }
 					paramSelection={ paramSelection }
 					currentParam={ currentParam }
-					emptyState={ emptyState }
+					emptyState={ resolvedEmptyState }
 					showRecent={ showRecent }
 					recentCommands={ recentCommands }
 					grouped={ grouped }
 					onSelect={ handleSelect }
 					onParamOptionSelect={ handleParamOptionSelect }
+					messages={ mergedMessages }
 				/>
 			</CommandPrimitive.List>
 		</CommandPrimitive.Dialog>

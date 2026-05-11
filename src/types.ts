@@ -114,6 +114,49 @@ export type CommandPaletteEvent =
 	| CommandActionExecuteEvent
 	| CommandResolveErrorEvent;
 
+export type ResultItemType = 'command' | 'option';
+
+export interface CommandsMessages {
+	/** Accessible label for the search input when browsing commands */
+	searchInputLabel: string;
+	/** Placeholder text for the search input when browsing commands */
+	searchPlaceholder: string;
+	/** Accessible dialog title */
+	dialogTitle: string;
+	/** Accessible dialog description */
+	dialogDescription: string;
+	/** Accessible label for the resolver loading spinner */
+	loading: string;
+	/** Accessible label for the command list */
+	commandListLabel: string;
+	/** Content shown when no commands match the search */
+	noResults: ReactNode;
+	/** Heading for the recently-used commands group */
+	recentlyUsed: string;
+	/** Accessible label for the parameter-selection breadcrumb */
+	selectionContext: string;
+	/** Fallback message when route resolution fails */
+	routeResolutionFailed: string;
+	/** Fallback message when search-based option resolution fails */
+	searchResolutionFailed: string;
+	/** Placeholder shown while a route resolution error is visible */
+	routeResolutionFailedPlaceholder: string;
+	/** Accessible input label while selecting a route param */
+	selectParamLabel: ( name: string ) => string;
+	/** Input placeholder while selecting a route param */
+	selectParamPlaceholder: ( name: string ) => string;
+	/** Group heading while selecting a route param */
+	chooseParam: ( name: string ) => string;
+	/** Content shown when a route param has no selectable options */
+	noOptionsAvailable: ( name: string ) => ReactNode;
+	/** Content shown when route param options do not match the search */
+	noMatchingOptions: ReactNode;
+	/** Screen-reader announcement for a non-zero result count */
+	resultCount: ( count: number, itemType: ResultItemType ) => string;
+	/** Screen-reader announcement when there are no results */
+	noResultsCount: ( itemType: ResultItemType ) => string;
+}
+
 /**
  * A resolved param is either a final string value or an array of options
  * for the user to choose from inside the palette. Each option can be a plain
@@ -149,6 +192,9 @@ export interface CommandsProps {
 
 	/** Called when the palette opens, a command executes, or route resolution fails */
 	onEvent?: ( event: CommandPaletteEvent ) => void;
+
+	/** Localizable strings rendered by the palette chrome */
+	messages?: Partial< CommandsMessages >;
 
 	/**
 	 * Keyboard shortcut to open the palette. Default: `"Mod+k"`
@@ -189,4 +235,5 @@ export interface CommandListContentProps {
 	grouped: Map< string, Command[] >;
 	onSelect: ( item: Command ) => void;
 	onParamOptionSelect: ( option: ResolvedOption ) => void;
+	messages: CommandsMessages;
 }

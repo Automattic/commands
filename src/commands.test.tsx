@@ -692,6 +692,168 @@ describe( 'Commands', () => {
 		} );
 	} );
 
+	/* --- messages --- */
+
+	describe( 'messages', () => {
+		it( 'uses custom messages for dialog, input, empty state, and recent heading', async () => {
+			render(
+				<Commands
+					commands={ mixedCommands }
+					triggerKey="Meta+k"
+					messages={ {
+						searchInputLabel: 'Find commands',
+						searchPlaceholder: 'Find something...',
+						dialogTitle: 'Command finder',
+						dialogDescription: 'Find and run things',
+						commandListLabel: 'Command suggestions',
+						noResults: 'Nothing matched.',
+						recentlyUsed: 'Recent commands',
+					} }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByRole( 'dialog', { name: 'Command finder' } ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Find something...' );
+			expect( input ).toHaveAttribute( 'aria-label', 'Find commands' );
+			expect(
+				within( screen.getByRole( 'dialog' ) ).getByRole( 'listbox', {
+					name: 'Command suggestions',
+				} )
+			).toBeInTheDocument();
+
+			fireEvent.change( input, { target: { value: 'zzzzzzz_no_match' } } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Nothing matched.' ) ).toBeInTheDocument();
+			} );
+
+			fireEvent.change( input, { target: { value: '' } } );
+			await waitFor( () => {
+				expect( screen.getByText( 'Settings' ) ).toBeInTheDocument();
+			} );
+			await selectCommand( 'Settings' );
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Recent commands' ) ).toBeInTheDocument();
+			} );
+		} );
+
+		it( 'keeps placeholder and emptyState props ahead of messages', async () => {
+			render(
+				<Commands
+					commands={ mixedCommands }
+					triggerKey="Meta+k"
+					placeholder="Prop placeholder..."
+					emptyState={ <span>Prop empty state</span> }
+					messages={ {
+						searchPlaceholder: 'Message placeholder...',
+						noResults: 'Message empty state',
+					} }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByPlaceholderText( 'Prop placeholder...' ) ).toBeInTheDocument();
+			} );
+
+			fireEvent.change( screen.getByPlaceholderText( 'Prop placeholder...' ), {
+				target: { value: 'zzzzzzz_no_match' },
+			} );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Prop empty state' ) ).toBeInTheDocument();
+			} );
+			expect( screen.queryByText( 'Message empty state' ) ).not.toBeInTheDocument();
+		} );
+
+		it( 'uses custom parameter-selection messages and result count messages', async () => {
+			const resolver = () => [ 'production', 'staging' ];
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					messages={ {
+						selectionContext: 'Selection trail',
+						selectParamLabel: name => `Pick ${ name }`,
+						selectParamPlaceholder: name => `Pick ${ name } now`,
+						chooseParam: name => `Pick a ${ name }`,
+						noMatchingOptions: 'No option matches.',
+						resultCount: ( count, itemType ) => `${ itemType }:${ count }`,
+						noResultsCount: itemType => `empty:${ itemType }`,
+					} }
+				/>
+			);
+			await openPaletteAndWait();
+
+			fireEvent.keyDown( screen.getByPlaceholderText( 'Search commands...' ), { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'production' ) ).toBeInTheDocument();
+			} );
+
+			const paramInput = screen.getByPlaceholderText( 'Pick env now' );
+			expect( paramInput ).toHaveAttribute( 'aria-label', 'Pick env' );
+			expect( screen.getByLabelText( 'Selection trail' ) ).toBeInTheDocument();
+			expect( screen.getByRole( 'group', { name: 'Pick a env' } ) ).toBeInTheDocument();
+			expect( screen.getByRole( 'status' ) ).toHaveTextContent( 'option:2' );
+
+			fireEvent.change( paramInput, { target: { value: 'zzzzzzz_no_match' } } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'No option matches.' ) ).toBeInTheDocument();
+				expect( screen.getByRole( 'status' ) ).toHaveTextContent( 'empty:option' );
+			} );
+		} );
+
+		it( 'uses custom loading and fallback resolver error messages', async () => {
+			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
+			let rejectRequest: ( reason?: unknown ) => void = () => {};
+			const resolver = () =>
+				new Promise< string >( ( _resolve, reject ) => {
+					rejectRequest = reject;
+				} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+					messages={ {
+						loading: 'Loading commands...',
+						routeResolutionFailed: 'Could not resolve route.',
+					} }
+				/>
+			);
+			await openPaletteAndWait();
+
+			fireEvent.keyDown( screen.getByPlaceholderText( 'Search commands...' ), { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect(
+					screen.getByRole( 'progressbar', { name: 'Loading commands...' } )
+				).toBeInTheDocument();
+			} );
+
+			rejectRequest( 'bad response' );
+
+			await waitFor( () => {
+				expect( screen.getByRole( 'alert' ) ).toHaveTextContent( 'Could not resolve route.' );
+			} );
+			errorSpy.mockRestore();
+		} );
+	} );
+
 	/* --- keyboard navigation --- */
 
 	describe( 'keyboard navigation', () => {
