@@ -461,6 +461,7 @@ function Commands( {
 			<CommandPrimitive.List aria-busy={ resolving || undefined }>
 				<CommandListContent
 					resolveError={ resolveError }
+					resolving={ resolving }
 					paramSelection={ paramSelection }
 					currentParam={ currentParam }
 					emptyState={ emptyState }

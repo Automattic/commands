@@ -1522,6 +1522,55 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'shows Loading... in the empty slot when no items are visible during resolve', async () => {
+			let finish!: ( value: string ) => void;
+			const resolver = (): Promise< string > =>
+				new Promise< string >( resolve => {
+					finish = resolve;
+				} );
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+			} );
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Resolver is pending — spinner visible.
+			await waitFor( () => {
+				expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
+			} );
+
+			// Filter all commands out — Empty slot is now rendered.
+			typeSearch( 'zzz' );
+
+			// Empty slot announces the loading state instead of "No results found.".
+			await waitFor( () => {
+				const empty = document.querySelector( '[cmdk-empty]' );
+				expect( empty ).toHaveTextContent( 'Loading...' );
+				expect( empty ).not.toHaveTextContent( 'No results found.' );
+			} );
+
+			finish( '42' );
+
+			await waitFor( () => {
+				expect(
+					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+				).not.toBeInTheDocument();
+			} );
+		} );
+
 		it( 'displays the error message when the resolver rejects', async () => {
 			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
 			const onNavigate = vi.fn();
