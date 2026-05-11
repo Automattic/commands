@@ -96,6 +96,11 @@
 	color: var( --cmdk-placeholder, var( --wpds-color-fg-content-neutral-subtle, #757575 ) );
 	margin-right: var( --cmdk-input-icon-gap, 12px );
 	flex-shrink: 0;
+	/* Many icon libraries (react-icons, lucide, etc.) render glyphs with `currentColor` for stroke
+	 * but leave `fill` unset, which inherits the page's foreground color and turns the icon into
+	 * a solid blob. Force the fill transparent so consumers don't have to override it themselves.
+	 */
+	fill: transparent;
 }
 
 [cmdk-input-spinner] {
