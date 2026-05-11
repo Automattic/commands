@@ -447,49 +447,13 @@ describe( 'Commands', () => {
 			} );
 		} );
 
-		it( 'renders the type label with a cmdk attribute hook', async () => {
-			const commands = [ cmd( { id: 'route', title: 'Route command', route: '/route' } ) ];
-			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
-			openPalette();
-
-			await waitFor( () => {
-				expect( screen.getByText( 'Route command' ) ).toBeInTheDocument();
-			} );
-
-			const item = screen.getByText( 'Route command' ).closest( '[cmdk-item]' ) as HTMLElement;
-			expect( item.querySelector( '[cmdk-item-type]' ) ).toHaveTextContent( 'Link' );
-		} );
-
-		it( 'shows "Link" label for route commands', async () => {
-			const commands = [ cmd( { id: 'a', title: 'Route Cmd', route: '/go' } ) ];
-			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
-			openPalette();
-
-			await waitFor( () => {
-				expect( screen.getByText( 'Link' ) ).toBeInTheDocument();
-			} );
-		} );
-
-		it( 'shows "Action" label for action commands', async () => {
-			const commands = [
-				cmd( { id: 'a', title: 'Action Cmd', action: () => {}, route: undefined } ),
-			];
-			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
-			openPalette();
-
-			await waitFor( () => {
-				expect( screen.getByText( 'Action' ) ).toBeInTheDocument();
-			} );
-		} );
-
-		it( 'shows shortcut instead of type label when shortcut is set', async () => {
+		it( 'shows shortcut on the right side when shortcut is set', async () => {
 			const commands = [ cmd( { id: 'a', title: 'With Shortcut', route: '/go', shortcut: '⌘G' } ) ];
 			render( <Commands commands={ commands } triggerKey="Meta+k" /> );
 			openPalette();
 
 			await waitFor( () => {
 				expect( screen.getByText( '⌘G' ) ).toBeInTheDocument();
-				expect( screen.queryByText( 'Link' ) ).not.toBeInTheDocument();
 			} );
 		} );
 	} );
@@ -1206,6 +1170,75 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'renders icon and description on labeled options', async () => {
+			const resolver = () => [
+				{
+					label: 'My App',
+					value: '42',
+					description: 'apps.example.com/my-app',
+					icon: <span data-testid="opt-icon">★</span>,
+				},
+			];
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'My App' ) ).toBeInTheDocument();
+			} );
+
+			const item = screen.getByText( 'My App' ).closest( '[cmdk-item]' ) as HTMLElement;
+			expect( item.querySelector( '[cmdk-item-icon]' ) ).toHaveAttribute( 'aria-hidden', 'true' );
+			expect( within( item ).getByTestId( 'opt-icon' ) ).toBeInTheDocument();
+			expect( item.querySelector( '[cmdk-item-description]' ) ).toHaveTextContent(
+				'apps.example.com/my-app'
+			);
+		} );
+
+		it( 'matches labeled option keywords during param search', async () => {
+			const resolver = () => [
+				{ label: 'Production', value: 'prod', keywords: [ 'live' ] },
+				{ label: 'Staging', value: 'stg' },
+			];
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/42/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Production' ) ).toBeInTheDocument();
+			} );
+
+			const paramInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.change( paramInput, { target: { value: 'live' } } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Production' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'Staging' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
 		it( 're-calls the resolver with search text during param selection', async () => {
 			const resolver = vi.fn().mockImplementation( ( _p: string, _s: unknown, search: string ) => {
 				if ( search === '' ) {
@@ -1292,6 +1325,121 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'shows the command title in a breadcrumb at the top during param selection', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ 'app-one', 'app-two' ];
+				}
+				return [ 'prod', 'dev' ];
+			};
+			const commands = [
+				cmd( { id: 'audit', title: 'Audit log', route: '/apps/:appId/:env/audit' } ),
+			];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			// No breadcrumb on the initial command list
+			expect( screen.queryByLabelText( 'Selection context' ) ).not.toBeInTheDocument();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// First param: command title alone
+			await waitFor( () => {
+				expect( screen.getByLabelText( 'Selection context' ) ).toBeInTheDocument();
+			} );
+			let trail = screen.getByLabelText( 'Selection context' );
+			expect( within( trail ).getByText( 'Audit log' ) ).toBeInTheDocument();
+
+			// Pick app-one — breadcrumb should grow
+			fireEvent.click( screen.getByText( 'app-one' ) );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+			} );
+
+			trail = screen.getByLabelText( 'Selection context' );
+			expect( within( trail ).getByText( 'Audit log' ) ).toBeInTheDocument();
+			expect( within( trail ).getByText( 'app-one' ) ).toBeInTheDocument();
+		} );
+
+		it( 'uses the labeled-value label in the breadcrumb', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ { label: 'My App', value: '42' } ];
+				}
+				return [ 'prod' ];
+			};
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			fireEvent.keyDown( screen.getByPlaceholderText( 'Search commands...' ), { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'My App' ) ).toBeInTheDocument();
+			} );
+
+			fireEvent.click( screen.getByText( 'My App' ) );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+			} );
+
+			const trail = screen.getByLabelText( 'Selection context' );
+			expect( within( trail ).getByText( 'My App' ) ).toBeInTheDocument();
+			expect( within( trail ).queryByText( '42' ) ).not.toBeInTheDocument();
+		} );
+
+		it( 'hides the breadcrumb when leaving param selection', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return '42';
+				}
+				return [ 'prod' ];
+			};
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			fireEvent.keyDown( screen.getByPlaceholderText( 'Search commands...' ), { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByLabelText( 'Selection context' ) ).toBeInTheDocument();
+			} );
+
+			const paramInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( paramInput, { key: 'Backspace' } );
+
+			await waitFor( () => {
+				expect( screen.queryByLabelText( 'Selection context' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
 		it( 'shows the sub-layer when params are unresolved without options', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => [];
@@ -1325,7 +1473,7 @@ describe( 'Commands', () => {
 	/* --- loading state --- */
 
 	describe( 'loading state', () => {
-		it( 'shows a loading indicator while the resolver is running', async () => {
+		it( 'shows a spinner while the resolver is running and keeps existing items visible', async () => {
 			let finish: ( value: string ) => void = () => {};
 			const resolver = () =>
 				new Promise< string >( resolve => {
@@ -1333,7 +1481,14 @@ describe( 'Commands', () => {
 				} );
 			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
-			render( <Commands commands={ commands } triggerKey="Meta+k" resolver={ resolver } /> );
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
 			openPalette();
 
 			await waitFor( () => {
@@ -1343,23 +1498,27 @@ describe( 'Commands', () => {
 			const input = screen.getByPlaceholderText( 'Search commands...' );
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
-			// Loading indicator visible while resolver is pending
+			// Spinner visible while resolver is pending
 			await waitFor( () => {
-				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+				expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
 			} );
 			expect( screen.getByRole( 'listbox', { name: 'Suggestions' } ) ).toHaveAttribute(
 				'aria-busy',
 				'true'
 			);
-			expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
 			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
+
+			// Existing items remain visible during loading
+			expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
 
 			// Resolve the promise
 			finish( '42' );
 
-			// Loading indicator disappears
+			// Spinner disappears
 			await waitFor( () => {
-				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+				expect(
+					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+				).not.toBeInTheDocument();
 			} );
 		} );
 
@@ -1393,7 +1552,7 @@ describe( 'Commands', () => {
 			} );
 
 			expect( screen.getByRole( 'status' ) ).toHaveTextContent( '' );
-			expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+			expect( screen.queryByRole( 'progressbar', { name: 'Loading...' } ) ).not.toBeInTheDocument();
 			expect( onNavigate ).not.toHaveBeenCalled();
 			expect( errorSpy ).toHaveBeenCalledWith(
 				'[@automattic/commands] Route resolution failed:',
@@ -1549,7 +1708,7 @@ describe( 'Commands', () => {
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			await waitFor( () => {
-				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+				expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
 			} );
 
 			// Close the dialog while resolver is pending
@@ -1567,7 +1726,9 @@ describe( 'Commands', () => {
 
 			await waitFor( () => {
 				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
-				expect( screen.queryByText( 'Loading...' ) ).not.toBeInTheDocument();
+				expect(
+					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+				).not.toBeInTheDocument();
 			} );
 			expect( onNavigate ).not.toHaveBeenCalled();
 		} );
@@ -1597,7 +1758,7 @@ describe( 'Commands', () => {
 			fireEvent.keyDown( input, { key: 'Enter' } );
 
 			await waitFor( () => {
-				expect( screen.getByText( 'Loading...' ) ).toBeInTheDocument();
+				expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
 			} );
 
 			// Close the dialog
@@ -1607,12 +1768,14 @@ describe( 'Commands', () => {
 				expect( screen.queryByRole( 'dialog' ) ).not.toBeInTheDocument();
 			} );
 
-			// Reopen — should not show loading
+			// Reopen — should not show the spinner
 			openPalette();
 
 			await waitFor( () => {
 				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
-				expect( screen.queryByText( 'Resolving…' ) ).not.toBeInTheDocument();
+				expect(
+					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+				).not.toBeInTheDocument();
 			} );
 		} );
 	} );
@@ -1663,7 +1826,6 @@ describe( 'theme CSS contract', () => {
 			'--cmdk-shadow',
 			'--cmdk-radius',
 			'--cmdk-max-height',
-			'--cmdk-type-label',
 			'--cmdk-item-selected-indicator',
 		];
 
@@ -1682,11 +1844,7 @@ describe( 'theme CSS contract', () => {
 		);
 	} );
 
-	it( 'lets type labels and shortcut labels be themed independently', () => {
-		expect( themeCss ).toContain( '[cmdk-item-type]' );
-		expect( themeCss ).toContain(
-			'color: var( --cmdk-type-label, var( --wpds-color-fg-content-neutral-subtle, #646970 ) )'
-		);
+	it( 'exposes the shortcut text variable for theming', () => {
 		expect( themeCss ).toContain( '--cmdk-shortcut-text' );
 	} );
 
@@ -1704,7 +1862,6 @@ describe( 'theme CSS contract', () => {
 			'[cmdk-item-title]',
 			'[cmdk-item-description]',
 			'[cmdk-item-shortcut]',
-			'[cmdk-item-type]',
 			'[cmdk-empty]',
 			'[cmdk-loading]',
 			'[cmdk-error]',

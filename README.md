@@ -146,7 +146,11 @@ import type {
 
 **`ResolveRouteResult`** — `{ path: string; unresolved: UnresolvedParam[]; selections: Record<string, string> }`. The path with resolved params replaced, unresolved params listed with optional selectable options, and accumulated param selections.
 
-**`UnresolvedParam`** — `{ name: string; options?: string[] }`. A param that still needs a value, optionally with options for the user to choose from.
+**`UnresolvedParam`** — `{ name: string; options?: ResolvedOption[] }`. A param that still needs a value, optionally with options for the user to choose from.
+
+**`ResolvedOption`** — `string | LabeledValue`. A param-selection option. Plain strings render as a single-line item using the string itself as both the display label and the route value. Use `LabeledValue` when you want a different display label, or to attach an icon, description, or extra search keywords.
+
+**`LabeledValue`** — `{ label: string; value: string; description?: string; icon?: ReactNode; keywords?: string[] }`. The `label` shows in the option row (and breadcrumb); `value` is what gets substituted into the route. Optional `icon`, `description`, and `keywords` mirror the corresponding fields on `Command`.
 
 ## Resolver pattern
 
@@ -159,9 +163,11 @@ Routes can contain `:param` placeholders that are resolved at runtime via the `r
 3. `selections` contains values from earlier params, including auto-resolved strings and user-selected options. `search` is the current text typed while choosing param options, or an empty string during initial resolution.
 4. For each param, the resolver returns:
    - A **string** → the param is replaced in the path immediately, added to `selections`, and the next param is resolved.
-   - A **string array** → the palette shows a sub-layer where the user picks one option. Remaining params are resolved after the user selects a value.
+   - A **`ResolvedOption[]`** array → the palette shows a sub-layer where the user picks one option. Each entry can be a plain string or a `LabeledValue` carrying an icon, description, and search keywords. Remaining params are resolved after the user selects a value.
    - **Anything else** → the param is listed as unresolved with no options.
-5. Once all params are resolved, `onNavigate` fires with the final path.
+5. While the resolver runs, a small spinner appears on the right side of the search input and the previously visible items stay in place; the new options replace them as soon as the resolver settles.
+6. While the user is several levels deep, a breadcrumb at the top of the palette shows the originating command title followed by each picked option's label, so the path is visible without leaving the active param input.
+7. Once all params are resolved, `onNavigate` fires with the final path.
 
 ### Example: dependent params
 
@@ -170,7 +176,14 @@ import type { CommandsProps } from '@automattic/commands';
 
 const resolver: CommandsProps[ 'resolver' ] = async ( param, selections, search ) => {
 	if ( param === 'appId' ) {
-		return [ 'my-app', 'other-app' ];
+		const apps = await fetchApps();
+		return apps.map( app => ( {
+			label: app.name,
+			value: app.id,
+			description: app.url,
+			icon: <AppLogo src={ app.iconUrl } />,
+			keywords: app.tags,
+		} ) );
 	}
 
 	if ( param === 'env' ) {
@@ -299,21 +312,35 @@ The default theme is bundled with `<Commands />` — no CSS import needed. Overr
 | `--cmdk-item-description-line-height` | `16px`    | Description line height.           |
 | `--cmdk-item-description-gap`         | `2px`     | Gap between title and description. |
 
-#### Shortcut badge and type label
+#### Shortcut badge
 
-| Variable                       | Default                    | Description                              |
-| ------------------------------ | -------------------------- | ---------------------------------------- |
-| `--cmdk-shortcut`              | `#646970`                  | Shortcut text color (fallback).          |
-| `--cmdk-shortcut-text`         | inherits `--cmdk-shortcut` | Shortcut text color.                     |
-| `--cmdk-shortcut-bg`           | `#f6f7f7`                  | Shortcut badge background.               |
-| `--cmdk-shortcut-border`       | `#dcdcde`                  | Shortcut badge border color.             |
-| `--cmdk-shortcut-border-width` | `1px`                      | Shortcut badge border width.             |
-| `--cmdk-shortcut-radius`       | `4px`                      | Shortcut badge border radius.            |
-| `--cmdk-shortcut-padding-y`    | `2px`                      | Shortcut badge vertical padding.         |
-| `--cmdk-shortcut-padding-x`    | `6px`                      | Shortcut badge horizontal padding.       |
-| `--cmdk-type-label`            | `#646970`                  | Type label color ("Link" / "Action").    |
-| `--cmdk-item-meta-font-size`   | `12px`                     | Font size for shortcut and type label.   |
-| `--cmdk-item-meta-line-height` | `16px`                     | Line height for shortcut and type label. |
+| Variable                       | Default                    | Description                        |
+| ------------------------------ | -------------------------- | ---------------------------------- |
+| `--cmdk-shortcut`              | `#646970`                  | Shortcut text color (fallback).    |
+| `--cmdk-shortcut-text`         | inherits `--cmdk-shortcut` | Shortcut text color.               |
+| `--cmdk-shortcut-bg`           | `#f6f7f7`                  | Shortcut badge background.         |
+| `--cmdk-shortcut-border`       | `#dcdcde`                  | Shortcut badge border color.       |
+| `--cmdk-shortcut-border-width` | `1px`                      | Shortcut badge border width.       |
+| `--cmdk-shortcut-radius`       | `4px`                      | Shortcut badge border radius.      |
+| `--cmdk-shortcut-padding-y`    | `2px`                      | Shortcut badge vertical padding.   |
+| `--cmdk-shortcut-padding-x`    | `6px`                      | Shortcut badge horizontal padding. |
+| `--cmdk-item-meta-font-size`   | `12px`                     | Font size for shortcut.            |
+| `--cmdk-item-meta-line-height` | `16px`                     | Line height for shortcut.          |
+
+#### Breadcrumb
+
+The breadcrumb shown above the input during multi-step param selection.
+
+| Variable                                | Default                         | Description                            |
+| --------------------------------------- | ------------------------------- | -------------------------------------- |
+| `--cmdk-breadcrumb-text`                | inherits `--cmdk-group-heading` | Default breadcrumb segment text color. |
+| `--cmdk-breadcrumb-current`             | inherits `--cmdk-text`          | Current (last) segment text color.     |
+| `--cmdk-breadcrumb-current-font-weight` | `500`                           | Current segment font weight.           |
+| `--cmdk-breadcrumb-font-size`           | `12px`                          | Breadcrumb font size.                  |
+| `--cmdk-breadcrumb-line-height`         | `16px`                          | Breadcrumb line height.                |
+| `--cmdk-breadcrumb-padding-y`           | `8px`                           | Breadcrumb vertical padding.           |
+| `--cmdk-breadcrumb-padding-x`           | `16px`                          | Breadcrumb horizontal padding.         |
+| `--cmdk-breadcrumb-gap`                 | `6px`                           | Gap between breadcrumb segments.       |
 
 #### Empty and loading states
 

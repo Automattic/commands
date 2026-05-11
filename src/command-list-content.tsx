@@ -8,12 +8,10 @@ const themeAttributes = {
 	itemTitle: { 'cmdk-item-title': '' },
 	itemDescription: { 'cmdk-item-description': '' },
 	itemShortcut: { 'cmdk-item-shortcut': '' },
-	itemType: { 'cmdk-item-type': '' },
 	error: { 'cmdk-error': '' },
 } as const;
 
 export function CommandListContent( {
-	resolving,
 	resolveError,
 	paramSelection,
 	currentParam,
@@ -26,10 +24,6 @@ export function CommandListContent( {
 }: CommandListContentProps ) {
 	const search = useCommandState( state => state.search );
 	const shouldShowRecent = showRecent && search === '' && recentCommands.length > 0;
-
-	if ( resolving ) {
-		return <CommandPrimitive.Loading>Loading...</CommandPrimitive.Loading>;
-	}
 
 	if ( resolveError ) {
 		return (
@@ -112,17 +106,32 @@ function optionValue( option: ResolvedOption ): string {
 
 interface OptionItemProps {
 	option: ResolvedOption;
-	onSelect: ( value: string ) => void;
+	onSelect: ( option: ResolvedOption ) => void;
 }
 
 function OptionItem( { option, onSelect }: OptionItemProps ) {
 	const label = optionLabel( option );
 	const value = optionValue( option );
+	const isLabeled = typeof option !== 'string';
+	const icon = isLabeled ? option.icon : undefined;
+	const description = isLabeled ? option.description : undefined;
+	const extraKeywords = isLabeled ? option.keywords ?? [] : [];
+	const keywords = [ label, ...extraKeywords ];
 
 	return (
-		<CommandPrimitive.Item value={ `${ label }:${ value }` } onSelect={ () => onSelect( value ) }>
+		<CommandPrimitive.Item
+			value={ `${ label }:${ value }` }
+			keywords={ keywords }
+			onSelect={ () => onSelect( option ) }
+		>
+			{ icon && (
+				<span { ...themeAttributes.itemIcon } aria-hidden="true">
+					{ icon }
+				</span>
+			) }
 			<span { ...themeAttributes.itemContent }>
 				<span { ...themeAttributes.itemTitle }>{ label }</span>
+				{ description && <span { ...themeAttributes.itemDescription }>{ description }</span> }
 			</span>
 		</CommandPrimitive.Item>
 	);
@@ -137,7 +146,6 @@ interface CommandItemProps {
 }
 
 function CommandItem( { command, value = command.id, onSelect }: CommandItemProps ) {
-	const typeLabel = command.route ? 'Link' : 'Action';
 	const keywords = [ command.title, ...( command.keywords ?? [] ) ];
 
 	return (
@@ -153,11 +161,7 @@ function CommandItem( { command, value = command.id, onSelect }: CommandItemProp
 					<span { ...themeAttributes.itemDescription }>{ command.description }</span>
 				) }
 			</span>
-			{ command.shortcut ? (
-				<span { ...themeAttributes.itemShortcut }>{ command.shortcut }</span>
-			) : (
-				<span { ...themeAttributes.itemType }>{ typeLabel }</span>
-			) }
+			{ command.shortcut && <span { ...themeAttributes.itemShortcut }>{ command.shortcut }</span> }
 		</CommandPrimitive.Item>
 	);
 }

@@ -35,6 +35,43 @@
 	color: var( --cmdk-text, var( --wpds-color-fg-content-neutral, #1e1e1e ) );
 }
 
+[cmdk-breadcrumb] {
+	display: flex;
+	align-items: center;
+	gap: var( --cmdk-breadcrumb-gap, 6px );
+	padding: var( --cmdk-breadcrumb-padding-y, 8px ) var( --cmdk-breadcrumb-padding-x, 16px );
+	font-size: var( --cmdk-breadcrumb-font-size, 12px );
+	line-height: var( --cmdk-breadcrumb-line-height, 16px );
+	color: var(
+		--cmdk-breadcrumb-text,
+		var( --cmdk-group-heading, var( --wpds-color-fg-content-neutral-subtle, #646970 ) )
+	);
+	background: var( --cmdk-input-bg, var( --wpds-color-bg-surface-neutral, #fff ) );
+	border-bottom: var( --cmdk-dialog-border-width, 1px ) solid
+		var( --cmdk-border, var( --wpds-color-stroke-surface-neutral-weak, #dcdcde ) );
+}
+
+[cmdk-breadcrumb-item] {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	min-width: 0;
+}
+
+[cmdk-breadcrumb-item]:last-child {
+	color: var(
+		--cmdk-breadcrumb-current,
+		var( --cmdk-text, var( --wpds-color-fg-content-neutral, #1e1e1e ) )
+	);
+	font-weight: var( --cmdk-breadcrumb-current-font-weight, 500 );
+	flex-shrink: 0;
+}
+
+[cmdk-breadcrumb-separator] {
+	flex-shrink: 0;
+	color: var( --cmdk-placeholder, var( --wpds-color-fg-content-neutral-subtle, #757575 ) );
+}
+
 [cmdk-input-wrapper] {
 	display: flex;
 	align-items: center;
@@ -59,6 +96,32 @@
 	color: var( --cmdk-placeholder, var( --wpds-color-fg-content-neutral-subtle, #757575 ) );
 	margin-right: var( --cmdk-input-icon-gap, 12px );
 	flex-shrink: 0;
+}
+
+[cmdk-input-spinner] {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	margin-left: var( --cmdk-input-icon-gap, 12px );
+	color: var( --cmdk-placeholder, var( --wpds-color-fg-content-neutral-subtle, #757575 ) );
+}
+
+[cmdk-input-spinner] svg {
+	margin-right: 0;
+	animation: cmdk-input-spinner-rotate 800ms linear infinite;
+}
+
+@keyframes cmdk-input-spinner-rotate {
+	to {
+		transform: rotate( 360deg );
+	}
+}
+
+@media ( prefers-reduced-motion: reduce ) {
+	[cmdk-input-spinner] svg {
+		animation: none;
+	}
 }
 
 [cmdk-input] {
@@ -160,19 +223,11 @@
 	white-space: nowrap;
 }
 
-[cmdk-item-type],
 [cmdk-item-shortcut] {
 	flex-shrink: 0;
 	font-size: var( --cmdk-item-meta-font-size, 12px );
 	line-height: var( --cmdk-item-meta-line-height, 16px );
 	font-family: inherit;
-}
-
-[cmdk-item-type] {
-	color: var( --cmdk-type-label, var( --wpds-color-fg-content-neutral-subtle, #646970 ) );
-}
-
-[cmdk-item-shortcut] {
 	color: var(
 		--cmdk-shortcut-text,
 		var( --cmdk-shortcut, var( --wpds-color-fg-content-neutral-subtle, #646970 ) )

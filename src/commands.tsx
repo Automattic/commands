@@ -1,20 +1,25 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { Root as VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Command as CommandPrimitive, useCommandState } from 'cmdk';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { CommandListContent } from './command-list-content';
 import { groupCommands } from './group-commands';
+import { useFocusRestore } from './hooks/use-focus-restore';
 import { useHotkey } from './hooks/use-hotkey';
 import { useRecentCommands } from './hooks/use-recent-commands';
 import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
-import type { Command, CommandsProps, ParamSelectionState } from './types';
+import type { Command, CommandsProps, ParamSelectionState, ResolvedOption } from './types';
 import './theme.css';
 
 const themeAttributes = {
 	inputWrapper: { 'cmdk-input-wrapper': '' },
+	inputSpinner: { 'cmdk-input-spinner': '' },
+	breadcrumb: { 'cmdk-breadcrumb': '' },
+	breadcrumbItem: { 'cmdk-breadcrumb-item': '' },
+	breadcrumbSeparator: { 'cmdk-breadcrumb-separator': '' },
 } as const;
 
 function SearchIcon() {
@@ -35,6 +40,69 @@ function SearchIcon() {
 			<line x1="21" y1="21" x2="16.65" y2="16.65" />
 		</svg>
 	);
+}
+
+function SpinnerIcon() {
+	return (
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="18"
+			height="18"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			strokeWidth="2"
+			strokeLinecap="round"
+			aria-hidden="true"
+		>
+			<path d="M21 12a9 9 0 1 1-6.219-8.56" />
+		</svg>
+	);
+}
+
+interface BreadcrumbProps {
+	commandTitle: string;
+	steps: string[];
+}
+
+function Breadcrumb( { commandTitle, steps }: BreadcrumbProps ) {
+	const trail = [ commandTitle, ...steps ];
+	return (
+		<div { ...themeAttributes.breadcrumb } aria-label="Selection context">
+			{ trail.map( ( label, index ) => (
+				<Fragment key={ index }>
+					{ index > 0 && (
+						<span { ...themeAttributes.breadcrumbSeparator } aria-hidden="true">
+							/
+						</span>
+					) }
+					<span { ...themeAttributes.breadcrumbItem }>{ label }</span>
+				</Fragment>
+			) ) }
+		</div>
+	);
+}
+
+function getInputCopy( {
+	currentParam,
+	resolveError,
+	placeholder,
+}: {
+	currentParam: { name: string } | null;
+	resolveError: string | null;
+	placeholder: string;
+} ): { label: string; placeholder: string } {
+	const label = currentParam ? `Select ${ currentParam.name }` : 'Search commands';
+
+	if ( resolveError ) {
+		return { label, placeholder: 'Route resolution failed. Backspace to cancel.' };
+	}
+
+	if ( currentParam ) {
+		return { label, placeholder: `Select ${ currentParam.name }. Backspace to cancel.` };
+	}
+
+	return { label, placeholder };
 }
 
 interface ResultCountAnnouncementProps {
@@ -80,37 +148,14 @@ function Commands( {
 	const [ resolveError, setResolveError ] = useState< string | null >( null );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
 	const [ paramSearch, setParamSearch ] = useState( '' );
-	const previousFocusRef = useRef< HTMLElement | null >( null );
 	const resolveGenRef = useRef( 0 );
 	const searchGenRef = useRef( 0 );
 	const isInitialSearchRef = useRef( true );
+	const { captureFocus } = useFocusRestore( open );
 
 	useEffect( () => {
 		validateCommands( commands );
 	}, [ commands ] );
-
-	useEffect( () => {
-		if ( open ) {
-			return;
-		}
-
-		const previousFocus = previousFocusRef.current;
-		previousFocusRef.current = null;
-
-		if ( ! previousFocus?.isConnected ) {
-			return;
-		}
-
-		const timeoutId = window.setTimeout( () => {
-			if ( previousFocus.isConnected ) {
-				previousFocus.focus();
-			}
-		}, 0 );
-
-		return () => {
-			window.clearTimeout( timeoutId );
-		};
-	}, [ open ] );
 
 	const grouped = useMemo( () => groupCommands( commands ), [ commands ] );
 	const { recent: recentCommands, addRecent } = useRecentCommands( commands, {
@@ -156,8 +201,7 @@ function Commands( {
 	const handleOpenChange = useCallback(
 		( next: boolean ) => {
 			if ( next ) {
-				previousFocusRef.current =
-					document.activeElement instanceof HTMLElement ? document.activeElement : null;
+				captureFocus();
 				if ( ! open ) {
 					onEvent?.( { type: 'open' } );
 				}
@@ -168,7 +212,7 @@ function Commands( {
 			closePalette();
 			resetParamSelection();
 		},
-		[ closePalette, onEvent, open, resetParamSelection ]
+		[ captureFocus, closePalette, onEvent, open, resetParamSelection ]
 	);
 
 	useHotkey( triggerKey, () => handleOpenChange( ! open ) );
@@ -211,6 +255,7 @@ function Commands( {
 								path: result.path,
 								pending: result.unresolved,
 								selections: result.selections,
+								breadcrumbs: [],
 							} );
 						}
 					} )
@@ -244,10 +289,12 @@ function Commands( {
 	);
 
 	const handleParamOptionSelect = useCallback(
-		( value: string ) => {
+		( option: ResolvedOption ) => {
 			if ( ! paramSelection ) {
 				return;
 			}
+			const value = typeof option === 'string' ? option : option.value;
+			const label = typeof option === 'string' ? option : option.label;
 			setParamSearch( '' );
 			searchGenRef.current += 1;
 			isInitialSearchRef.current = true;
@@ -255,6 +302,7 @@ function Commands( {
 			const updatedPath = replaceRouteParam( paramSelection.path, current.name, value );
 			const remaining = paramSelection.pending.slice( 1 );
 			const updatedSelections = { ...paramSelection.selections, [ current.name ]: value };
+			const updatedBreadcrumbs = [ ...paramSelection.breadcrumbs, label ];
 
 			if ( remaining.length === 0 ) {
 				completeNavigation( updatedPath, paramSelection.command );
@@ -278,6 +326,7 @@ function Commands( {
 							path: result.path,
 							pending: result.unresolved,
 							selections: result.selections,
+							breadcrumbs: updatedBreadcrumbs,
 						} );
 					}
 				} )
@@ -366,14 +415,11 @@ function Commands( {
 		// eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run when paramSearch changes
 	}, [ paramSearch ] );
 
-	const inputLabel = currentParam ? `Select ${ currentParam.name }` : 'Search commands';
-	let inputPlaceholder = currentParam
-		? `Select ${ currentParam.name }. Backspace to cancel.`
-		: placeholder;
-
-	if ( resolveError ) {
-		inputPlaceholder = 'Route resolution failed. Backspace to cancel.';
-	}
+	const { label: inputLabel, placeholder: inputPlaceholder } = getInputCopy( {
+		currentParam,
+		resolveError,
+		placeholder,
+	} );
 
 	return (
 		<CommandPrimitive.Dialog
@@ -392,6 +438,12 @@ function Commands( {
 				itemLabel={ currentParam ? 'option' : 'command' }
 				silent={ resolving || Boolean( resolveError ) }
 			/>
+			{ paramSelection && ! resolveError && (
+				<Breadcrumb
+					commandTitle={ paramSelection.command.title }
+					steps={ paramSelection.breadcrumbs }
+				/>
+			) }
 			<div { ...themeAttributes.inputWrapper }>
 				<SearchIcon />
 				<CommandPrimitive.Input
@@ -400,10 +452,14 @@ function Commands( {
 					onKeyDown={ paramSelection || resolveError ? handleParamKeyDown : undefined }
 					onValueChange={ paramSelection ? setParamSearch : undefined }
 				/>
+				{ resolving && (
+					<span { ...themeAttributes.inputSpinner } role="progressbar" aria-label="Loading...">
+						<SpinnerIcon />
+					</span>
+				) }
 			</div>
 			<CommandPrimitive.List aria-busy={ resolving || undefined }>
 				<CommandListContent
-					resolving={ resolving }
 					resolveError={ resolveError }
 					paramSelection={ paramSelection }
 					currentParam={ currentParam }

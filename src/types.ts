@@ -2,11 +2,16 @@ import type { ReactNode } from 'react';
 
 /**
  * A labeled value pairs a human-readable label with the underlying value
- * that gets substituted into the route.
+ * that gets substituted into the route. Optionally carries an icon, a
+ * secondary description line, and extra search keywords — mirroring the
+ * fields a top-level `Command` can carry.
  */
 export interface LabeledValue {
 	label: string;
 	value: string;
+	description?: string;
+	icon?: ReactNode;
+	keywords?: string[];
 }
 
 /** A single resolver option — either a plain string or a labeled value. */
@@ -66,6 +71,12 @@ export interface ParamSelectionState {
 	pending: UnresolvedParam[];
 	/** Accumulated user selections so far (param name → selected value) */
 	selections: Record< string, string >;
+	/**
+	 * Human-readable labels for params the user has already picked, in the
+	 * order they were picked. Drives the breadcrumb shown at the top of the
+	 * palette while later params are being chosen.
+	 */
+	breadcrumbs: string[];
 }
 
 interface BaseCommandPaletteEvent {
@@ -169,7 +180,6 @@ export interface CommandsProps {
 }
 
 export interface CommandListContentProps {
-	resolving: boolean;
 	resolveError: string | null;
 	paramSelection: ParamSelectionState | null;
 	currentParam: UnresolvedParam | null;
@@ -178,5 +188,5 @@ export interface CommandListContentProps {
 	recentCommands: Command[];
 	grouped: Map< string, Command[] >;
 	onSelect: ( item: Command ) => void;
-	onParamOptionSelect: ( value: string ) => void;
+	onParamOptionSelect: ( option: ResolvedOption ) => void;
 }

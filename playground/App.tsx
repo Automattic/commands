@@ -95,7 +95,26 @@ const envsByApp: Record< string, string[] > = {
 
 const resolver: CommandsProps[ 'resolver' ] = async ( param, selections ) => {
 	if ( param === 'appId' ) {
-		return [ 'my-cool-app', 'my-other-app', 'non-existent-app' ];
+		return [
+			{
+				label: 'My cool app',
+				value: 'my-cool-app',
+				description: 'apps.example.com/my-cool-app',
+				icon: '\ud83d\ude80',
+				keywords: [ 'primary', 'flagship' ],
+			},
+			{
+				label: 'My other app',
+				value: 'my-other-app',
+				description: 'apps.example.com/my-other-app',
+				icon: '\ud83e\uddea',
+			},
+			{
+				label: 'Non-existent app (will error)',
+				value: 'non-existent-app',
+				icon: '\u26a0\ufe0f',
+			},
+		];
 	}
 
 	if ( param === 'env' ) {
@@ -131,8 +150,9 @@ export function App() {
 				Press <kbd>Mod+k</kbd> to open the command palette.
 			</p>
 			<p style={ { fontSize: 14, color: '#666' } }>
-				Try &ldquo;Audit log&rdquo; to see the loading state followed by the param-selection
-				sub-layer.
+				Try &ldquo;Audit log&rdquo; to see the input spinner during loading, the param-selection
+				sub-layer with icons and descriptions, and the breadcrumb at the top of the palette as you
+				drill down.
 			</p>
 			<Commands
 				commands={ commands.map( command => ( {
