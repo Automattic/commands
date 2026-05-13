@@ -21,6 +21,7 @@ export function CommandListContent( {
 	grouped,
 	onSelect,
 	onParamOptionSelect,
+	localeText,
 }: CommandListContentProps ) {
 	const search = useCommandState( state => state.search );
 	const shouldShowRecent = showRecent && search === '' && recentCommands.length > 0;
@@ -36,9 +37,9 @@ export function CommandListContent( {
 	if ( ! paramSelection ) {
 		return (
 			<>
-				<CommandPrimitive.Empty>{ emptyState ?? 'No results found.' }</CommandPrimitive.Empty>
+				<CommandPrimitive.Empty>{ emptyState }</CommandPrimitive.Empty>
 				{ shouldShowRecent && (
-					<CommandPrimitive.Group heading="Recently Used">
+					<CommandPrimitive.Group heading={ localeText.recentlyUsed }>
 						{ recentCommands.map( item => (
 							<CommandItem
 								key={ item.id }
@@ -70,7 +71,7 @@ export function CommandListContent( {
 	if ( ! currentParam?.options ) {
 		return (
 			<CommandPrimitive.Empty>
-				No options available for { currentParam?.name }.
+				{ localeText.noOptionsAvailable( currentParam?.name ?? '' ) }
 			</CommandPrimitive.Empty>
 		);
 	}
@@ -78,8 +79,8 @@ export function CommandListContent( {
 	// Selecting a param, and options are available.
 	return (
 		<>
-			<CommandPrimitive.Empty>No matching options.</CommandPrimitive.Empty>
-			<CommandPrimitive.Group heading={ `Choose ${ currentParam.name }` }>
+			<CommandPrimitive.Empty>{ localeText.noMatchingOptions }</CommandPrimitive.Empty>
+			<CommandPrimitive.Group heading={ localeText.chooseParam( currentParam.name ) }>
 				{ currentParam.options.map( option => (
 					<OptionItem
 						key={ optionValue( option ) }

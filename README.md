@@ -81,6 +81,7 @@ Props for the `<Commands />` component.
 | `resolver`         | `(param: string, selections: Record<string, string>, search: string) => ResolvedParam \| Promise<ResolvedParam>` | —                               | Resolves route `:param` variables one at a time. See [Resolver pattern](#resolver-pattern).                                                     |
 | `onNavigate`       | `(path: string) => void`                                                                                         | —                               | Called with the fully resolved path when a route command is selected.                                                                           |
 | `onEvent`          | `(event: CommandPaletteEvent) => void`                                                                           | —                               | Called when the palette opens, a command executes, or route resolution fails.                                                                   |
+| `localeText`       | `Partial<CommandsLocaleText>`                                                                                    | English defaults                | Localizable strings rendered by the palette chrome. See [Locale text](#locale-text).                                                            |
 | `triggerKey`       | `string`                                                                                                         | `"Mod+k"`                       | Keyboard shortcut to toggle the palette. `Mod` maps to Cmd on macOS, Ctrl elsewhere. Modifiers are `+`-separated: `"Meta+k"`, `"Ctrl+Shift+p"`. |
 | `placeholder`      | `string`                                                                                                         | `"Search commands..."`          | Placeholder text for the search input.                                                                                                          |
 | `filter`           | `(value: string, search: string) => number`                                                                      | cmdk built-in                   | Custom scoring function. Return 0 to hide, 1 to rank highest.                                                                                   |
@@ -88,6 +89,44 @@ Props for the `<Commands />` component.
 | `showRecent`       | `boolean`                                                                                                        | `true`                          | Show recently selected commands when the search input is empty.                                                                                 |
 | `recentLimit`      | `number`                                                                                                         | `5`                             | Maximum number of recent commands to display.                                                                                                   |
 | `recentStorageKey` | `string`                                                                                                         | `"@automattic/commands:recent"` | `localStorage` key for persisting recent commands.                                                                                              |
+
+### Locale text
+
+`localeText` lets consumers localize strings owned by the palette package without adding an i18n runtime dependency to `@automattic/commands`.
+
+```tsx
+<Commands
+	commands={ commands }
+	localeText={ {
+		searchInputLabel: translate( 'Search commands' ),
+		searchPlaceholder: translate( 'Search commands...' ),
+		dialogTitle: translate( 'Command palette' ),
+		dialogDescription: translate( 'Search and run commands' ),
+		loading: translate( 'Loading...' ),
+		commandListLabel: translate( 'Suggestions' ),
+		noResults: translate( 'No results found.' ),
+		recentlyUsed: translate( 'Recently Used' ),
+		resultCount: ( count, itemType ) =>
+			itemType === 'command'
+				? translate( '%(count)d command found.', '%(count)d commands found.', {
+						count,
+						args: { count },
+				  } )
+				: translate( '%(count)d option found.', '%(count)d options found.', {
+						count,
+						args: { count },
+				  } ),
+		noResultsCount: itemType =>
+			itemType === 'command' ? translate( 'No commands found.' ) : translate( 'No options found.' ),
+	} }
+/>
+```
+
+`placeholder` and `emptyState` are kept for backward compatibility and take precedence over `localeText.searchPlaceholder` and `localeText.noResults` when provided.
+
+Parameterized message callbacks receive the route parameter identifier, such as `appId`, `env`, or `organization`. Consumers can map those identifiers to translated display labels before returning copy.
+
+The `localeText` prop only covers package-owned palette chrome. Consumer-owned command config strings should be translated where the command array is built: `title`, `description`, `group`, and localized `keywords` for search quality.
 
 ### `CommandPaletteEvent`
 
@@ -135,14 +174,20 @@ import { resolveRoute, extractParams, replaceRouteParam } from '@automattic/comm
 import type {
 	Command,
 	CommandPaletteEvent,
+	CommandsLocaleText,
 	CommandsProps,
 	ResolvedParam,
 	ResolveRouteResult,
+	ResultItemType,
 	UnresolvedParam,
 } from '@automattic/commands';
 ```
 
-**`ResolvedParam`** — `string | string[]`. A string means the param is fully resolved; an array means the palette shows a sub-layer for the user to pick one.
+**`CommandsLocaleText`** — localizable strings and callbacks used for package-owned palette chrome.
+
+**`ResultItemType`** — `'command' | 'option'`. Passed to result-count message callbacks so consumers can localize the whole sentence.
+
+**`ResolvedParam`** — `string | ResolvedOption[]`. A string means the param is fully resolved; an array means the palette shows a sub-layer for the user to pick one.
 
 **`ResolveRouteResult`** — `{ path: string; unresolved: UnresolvedParam[]; selections: Record<string, string> }`. The path with resolved params replaced, unresolved params listed with optional selectable options, and accumulated param selections.
 
