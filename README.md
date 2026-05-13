@@ -81,7 +81,7 @@ Props for the `<Commands />` component.
 | `resolver`         | `(param: string, selections: Record<string, string>, search: string) => ResolvedParam \| Promise<ResolvedParam>` | —                               | Resolves route `:param` variables one at a time. See [Resolver pattern](#resolver-pattern).                                                     |
 | `onNavigate`       | `(path: string) => void`                                                                                         | —                               | Called with the fully resolved path when a route command is selected.                                                                           |
 | `onEvent`          | `(event: CommandPaletteEvent) => void`                                                                           | —                               | Called when the palette opens, a command executes, or route resolution fails.                                                                   |
-| `messages`         | `Partial<CommandsMessages>`                                                                                      | English defaults                | Localizable strings rendered by the palette chrome. See [Messages](#messages).                                                                  |
+| `localeText`       | `Partial<CommandsLocaleText>`                                                                                    | English defaults                | Localizable strings rendered by the palette chrome. See [Locale text](#locale-text).                                                            |
 | `triggerKey`       | `string`                                                                                                         | `"Mod+k"`                       | Keyboard shortcut to toggle the palette. `Mod` maps to Cmd on macOS, Ctrl elsewhere. Modifiers are `+`-separated: `"Meta+k"`, `"Ctrl+Shift+p"`. |
 | `placeholder`      | `string`                                                                                                         | `"Search commands..."`          | Placeholder text for the search input.                                                                                                          |
 | `filter`           | `(value: string, search: string) => number`                                                                      | cmdk built-in                   | Custom scoring function. Return 0 to hide, 1 to rank highest.                                                                                   |
@@ -90,14 +90,14 @@ Props for the `<Commands />` component.
 | `recentLimit`      | `number`                                                                                                         | `5`                             | Maximum number of recent commands to display.                                                                                                   |
 | `recentStorageKey` | `string`                                                                                                         | `"@automattic/commands:recent"` | `localStorage` key for persisting recent commands.                                                                                              |
 
-### Messages
+### Locale text
 
-`messages` lets consumers localize strings owned by the palette package without adding an i18n runtime dependency to `@automattic/commands`.
+`localeText` lets consumers localize strings owned by the palette package without adding an i18n runtime dependency to `@automattic/commands`.
 
 ```tsx
 <Commands
 	commands={ commands }
-	messages={ {
+	localeText={ {
 		searchInputLabel: translate( 'Search commands' ),
 		searchPlaceholder: translate( 'Search commands...' ),
 		dialogTitle: translate( 'Command palette' ),
@@ -122,11 +122,11 @@ Props for the `<Commands />` component.
 />
 ```
 
-`placeholder` and `emptyState` are kept for backward compatibility and take precedence over `messages.searchPlaceholder` and `messages.noResults` when provided.
+`placeholder` and `emptyState` are kept for backward compatibility and take precedence over `localeText.searchPlaceholder` and `localeText.noResults` when provided.
 
 Parameterized message callbacks receive the route parameter identifier, such as `appId`, `env`, or `organization`. Consumers can map those identifiers to translated display labels before returning copy.
 
-The `messages` prop only covers package-owned palette chrome. Consumer-owned command config strings should be translated where the command array is built: `title`, `description`, `group`, and localized `keywords` for search quality.
+The `localeText` prop only covers package-owned palette chrome. Consumer-owned command config strings should be translated where the command array is built: `title`, `description`, `group`, and localized `keywords` for search quality.
 
 ### `CommandPaletteEvent`
 
@@ -174,7 +174,7 @@ import { resolveRoute, extractParams, replaceRouteParam } from '@automattic/comm
 import type {
 	Command,
 	CommandPaletteEvent,
-	CommandsMessages,
+	CommandsLocaleText,
 	CommandsProps,
 	ResolvedParam,
 	ResolveRouteResult,
@@ -183,7 +183,7 @@ import type {
 } from '@automattic/commands';
 ```
 
-**`CommandsMessages`** — localizable strings and callbacks used for package-owned palette chrome.
+**`CommandsLocaleText`** — localizable strings and callbacks used for package-owned palette chrome.
 
 **`ResultItemType`** — `'command' | 'option'`. Passed to result-count message callbacks so consumers can localize the whole sentence.
 

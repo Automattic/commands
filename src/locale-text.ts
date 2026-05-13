@@ -1,6 +1,6 @@
-import type { CommandsMessages } from './types';
+import type { CommandsLocaleText } from './types';
 
-export const defaultMessages: CommandsMessages = {
+export const defaultLocaleText: CommandsLocaleText = {
 	searchInputLabel: 'Search commands',
 	searchPlaceholder: 'Search commands...',
 	dialogTitle: 'Command palette',
@@ -22,8 +22,8 @@ export const defaultMessages: CommandsMessages = {
 	noResultsCount: itemType => `No ${ itemType }s found.`,
 };
 
-export function mergeMessages(
-	messages: Partial< CommandsMessages > | undefined
-): CommandsMessages {
-	return { ...defaultMessages, ...messages };
+export function mergeLocaleText(
+	localeText: Partial< CommandsLocaleText > | undefined
+): CommandsLocaleText {
+	return { ...defaultLocaleText, ...localeText };
 }

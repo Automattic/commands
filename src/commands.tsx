@@ -8,13 +8,13 @@ import { groupCommands } from './group-commands';
 import { useFocusRestore } from './hooks/use-focus-restore';
 import { useHotkey } from './hooks/use-hotkey';
 import { useRecentCommands } from './hooks/use-recent-commands';
-import { mergeMessages } from './messages';
+import { mergeLocaleText } from './locale-text';
 import { extractParams, replaceRouteParam, resolveRoute } from './resolve-route';
 import { validateCommands } from './validate-commands';
 
 import type {
 	Command,
-	CommandsMessages,
+	CommandsLocaleText,
 	CommandsProps,
 	ParamSelectionState,
 	ResolvedOption,
@@ -96,23 +96,23 @@ function getInputCopy( {
 	currentParam,
 	resolveError,
 	placeholder,
-	messages,
+	localeText,
 }: {
 	currentParam: { name: string } | null;
 	resolveError: string | null;
 	placeholder: string;
-	messages: CommandsMessages;
+	localeText: CommandsLocaleText;
 } ): { label: string; placeholder: string } {
 	const label = currentParam
-		? messages.selectParamLabel( currentParam.name )
-		: messages.searchInputLabel;
+		? localeText.selectParamLabel( currentParam.name )
+		: localeText.searchInputLabel;
 
 	if ( resolveError ) {
-		return { label, placeholder: messages.routeResolutionFailedPlaceholder };
+		return { label, placeholder: localeText.routeResolutionFailedPlaceholder };
 	}
 
 	if ( currentParam ) {
-		return { label, placeholder: messages.selectParamPlaceholder( currentParam.name ) };
+		return { label, placeholder: localeText.selectParamPlaceholder( currentParam.name ) };
 	}
 
 	return { label, placeholder };
@@ -120,17 +120,19 @@ function getInputCopy( {
 
 interface ResultCountAnnouncementProps {
 	itemType: ResultItemType;
-	messages: CommandsMessages;
+	localeText: CommandsLocaleText;
 	silent: boolean;
 }
 
-function ResultCountAnnouncement( { itemType, messages, silent }: ResultCountAnnouncementProps ) {
+function ResultCountAnnouncement( { itemType, localeText, silent }: ResultCountAnnouncementProps ) {
 	const count = useCommandState( state => state.filtered.count );
 	let message = '';
 
 	if ( ! silent ) {
 		message =
-			count === 0 ? messages.noResultsCount( itemType ) : messages.resultCount( count, itemType );
+			count === 0
+				? localeText.noResultsCount( itemType )
+				: localeText.resultCount( count, itemType );
 	}
 
 	return (
@@ -146,7 +148,7 @@ function Commands( {
 	commands,
 	resolver,
 	placeholder,
-	messages,
+	localeText,
 	filter,
 	emptyState,
 	triggerKey = 'Mod+k',
@@ -165,9 +167,9 @@ function Commands( {
 	const searchGenRef = useRef( 0 );
 	const isInitialSearchRef = useRef( true );
 	const { captureFocus } = useFocusRestore( open );
-	const mergedMessages = mergeMessages( messages );
-	const resolvedPlaceholder = placeholder ?? mergedMessages.searchPlaceholder;
-	const resolvedEmptyState = emptyState ?? mergedMessages.noResults;
+	const mergedLocaleText = mergeLocaleText( localeText );
+	const resolvedPlaceholder = placeholder ?? mergedLocaleText.searchPlaceholder;
+	const resolvedEmptyState = emptyState ?? mergedLocaleText.noResults;
 
 	useEffect( () => {
 		validateCommands( commands );
@@ -284,7 +286,7 @@ function Commands( {
 						emitResolveErrorEvent( item, error );
 						setResolving( false );
 						setResolveError(
-							error instanceof Error ? error.message : mergedMessages.routeResolutionFailed
+							error instanceof Error ? error.message : mergedLocaleText.routeResolutionFailed
 						);
 					} );
 			} else {
@@ -301,7 +303,7 @@ function Commands( {
 			completeNavigation,
 			emitActionExecuteEvent,
 			emitResolveErrorEvent,
-			mergedMessages.routeResolutionFailed,
+			mergedLocaleText.routeResolutionFailed,
 			resolver,
 			showRecent,
 		]
@@ -358,7 +360,7 @@ function Commands( {
 					emitResolveErrorEvent( paramSelection.command, error );
 					setResolving( false );
 					setResolveError(
-						error instanceof Error ? error.message : mergedMessages.routeResolutionFailed
+						error instanceof Error ? error.message : mergedLocaleText.routeResolutionFailed
 					);
 				} );
 		},
@@ -366,7 +368,7 @@ function Commands( {
 			paramSelection,
 			completeNavigation,
 			emitResolveErrorEvent,
-			mergedMessages.routeResolutionFailed,
+			mergedLocaleText.routeResolutionFailed,
 			resolver,
 		]
 	);
@@ -435,7 +437,7 @@ function Commands( {
 					console.error( '[@automattic/commands] Search resolution failed:', error );
 					setResolving( false );
 					setResolveError(
-						error instanceof Error ? error.message : mergedMessages.searchResolutionFailed
+						error instanceof Error ? error.message : mergedLocaleText.searchResolutionFailed
 					);
 				} );
 		}, 300 );
@@ -448,7 +450,7 @@ function Commands( {
 		currentParam,
 		resolveError,
 		placeholder: resolvedPlaceholder,
-		messages: mergedMessages,
+		localeText: mergedLocaleText,
 	} );
 
 	return (
@@ -461,19 +463,19 @@ function Commands( {
 			loop
 		>
 			<VisuallyHidden>
-				<Dialog.Title>{ mergedMessages.dialogTitle }</Dialog.Title>
-				<Dialog.Description>{ mergedMessages.dialogDescription }</Dialog.Description>
+				<Dialog.Title>{ mergedLocaleText.dialogTitle }</Dialog.Title>
+				<Dialog.Description>{ mergedLocaleText.dialogDescription }</Dialog.Description>
 			</VisuallyHidden>
 			<ResultCountAnnouncement
 				itemType={ currentParam ? 'option' : 'command' }
-				messages={ mergedMessages }
+				localeText={ mergedLocaleText }
 				silent={ resolving || Boolean( resolveError ) }
 			/>
 			{ paramSelection && ! resolveError && (
 				<Breadcrumb
 					commandTitle={ paramSelection.command.title }
 					steps={ paramSelection.breadcrumbs }
-					label={ mergedMessages.selectionContext }
+					label={ mergedLocaleText.selectionContext }
 				/>
 			) }
 			<div { ...themeAttributes.inputWrapper }>
@@ -488,7 +490,7 @@ function Commands( {
 					<span
 						{ ...themeAttributes.inputSpinner }
 						role="progressbar"
-						aria-label={ mergedMessages.loading }
+						aria-label={ mergedLocaleText.loading }
 					>
 						<SpinnerIcon />
 					</span>
@@ -496,7 +498,7 @@ function Commands( {
 			</div>
 			<CommandPrimitive.List
 				aria-busy={ resolving || undefined }
-				label={ mergedMessages.commandListLabel }
+				label={ mergedLocaleText.commandListLabel }
 			>
 				<CommandListContent
 					resolveError={ resolveError }
@@ -508,7 +510,7 @@ function Commands( {
 					grouped={ grouped }
 					onSelect={ handleSelect }
 					onParamOptionSelect={ handleParamOptionSelect }
-					messages={ mergedMessages }
+					localeText={ mergedLocaleText }
 				/>
 			</CommandPrimitive.List>
 		</CommandPrimitive.Dialog>

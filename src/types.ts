@@ -116,7 +116,7 @@ export type CommandPaletteEvent =
 
 export type ResultItemType = 'command' | 'option';
 
-export interface CommandsMessages {
+export interface CommandsLocaleText {
 	/** Accessible label for the search input when browsing commands */
 	searchInputLabel: string;
 	/** Placeholder text for the search input when browsing commands */
@@ -194,7 +194,7 @@ export interface CommandsProps {
 	onEvent?: ( event: CommandPaletteEvent ) => void;
 
 	/** Localizable strings rendered by the palette chrome */
-	messages?: Partial< CommandsMessages >;
+	localeText?: Partial< CommandsLocaleText >;
 
 	/**
 	 * Keyboard shortcut to open the palette. Default: `"Mod+k"`
@@ -235,5 +235,5 @@ export interface CommandListContentProps {
 	grouped: Map< string, Command[] >;
 	onSelect: ( item: Command ) => void;
 	onParamOptionSelect: ( option: ResolvedOption ) => void;
-	messages: CommandsMessages;
+	localeText: CommandsLocaleText;
 }

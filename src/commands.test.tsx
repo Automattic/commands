@@ -692,15 +692,15 @@ describe( 'Commands', () => {
 		} );
 	} );
 
-	/* --- messages --- */
+	/* --- localeText --- */
 
-	describe( 'messages', () => {
-		it( 'uses custom messages for dialog, input, empty state, and recent heading', async () => {
+	describe( 'localeText', () => {
+		it( 'uses custom localeText for dialog, input, empty state, and recent heading', async () => {
 			render(
 				<Commands
 					commands={ mixedCommands }
 					triggerKey="Meta+k"
-					messages={ {
+					localeText={ {
 						searchInputLabel: 'Find commands',
 						searchPlaceholder: 'Find something...',
 						dialogTitle: 'Command finder',
@@ -743,14 +743,14 @@ describe( 'Commands', () => {
 			} );
 		} );
 
-		it( 'keeps placeholder and emptyState props ahead of messages', async () => {
+		it( 'keeps placeholder and emptyState props ahead of localeText', async () => {
 			render(
 				<Commands
 					commands={ mixedCommands }
 					triggerKey="Meta+k"
 					placeholder="Prop placeholder..."
 					emptyState={ <span>Prop empty state</span> }
-					messages={ {
+					localeText={ {
 						searchPlaceholder: 'Message placeholder...',
 						noResults: 'Message empty state',
 					} }
@@ -772,7 +772,7 @@ describe( 'Commands', () => {
 			expect( screen.queryByText( 'Message empty state' ) ).not.toBeInTheDocument();
 		} );
 
-		it( 'uses custom parameter-selection messages and result count messages', async () => {
+		it( 'uses custom parameter-selection localeText and result count localeText', async () => {
 			const resolver = () => [ 'production', 'staging' ];
 			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:env/audit' } ) ];
 
@@ -781,7 +781,7 @@ describe( 'Commands', () => {
 					commands={ commands }
 					triggerKey="Meta+k"
 					resolver={ resolver }
-					messages={ {
+					localeText={ {
 						selectionContext: 'Selection trail',
 						selectParamLabel: name => `Pick ${ name }`,
 						selectParamPlaceholder: name => `Pick ${ name } now`,
@@ -814,7 +814,7 @@ describe( 'Commands', () => {
 			} );
 		} );
 
-		it( 'uses custom loading and fallback resolver error messages', async () => {
+		it( 'uses custom loading and fallback resolver error localeText', async () => {
 			const errorSpy = vi.spyOn( console, 'error' ).mockImplementation( () => {} );
 			let rejectRequest: ( reason?: unknown ) => void = () => {};
 			const resolver = () =>
@@ -829,7 +829,7 @@ describe( 'Commands', () => {
 					triggerKey="Meta+k"
 					resolver={ resolver }
 					showRecent={ false }
-					messages={ {
+					localeText={ {
 						loading: 'Loading commands...',
 						routeResolutionFailed: 'Could not resolve route.',
 					} }

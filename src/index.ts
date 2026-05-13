@@ -3,7 +3,7 @@ export { resolveRoute, extractParams, replaceRouteParam } from './resolve-route'
 export type {
 	Command,
 	CommandPaletteEvent,
-	CommandsMessages,
+	CommandsLocaleText,
 	CommandsProps,
 	LabeledValue,
 	ResolvedOption,
