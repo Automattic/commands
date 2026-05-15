@@ -162,6 +162,9 @@ function Commands( {
 	const [ resolving, setResolving ] = useState( false );
 	const [ resolveError, setResolveError ] = useState< string | null >( null );
 	const [ paramSelection, setParamSelection ] = useState< ParamSelectionState | null >( null );
+	const [ paramSelectionHistory, setParamSelectionHistory ] = useState< ParamSelectionState[] >(
+		[]
+	);
 	const [ paramSearch, setParamSearch ] = useState( '' );
 	const resolveGenRef = useRef( 0 );
 	const searchGenRef = useRef( 0 );
@@ -188,6 +191,7 @@ function Commands( {
 		setResolving( false );
 		setResolveError( null );
 		setParamSelection( null );
+		setParamSelectionHistory( [] );
 		setParamSearch( '' );
 	}, [] );
 
@@ -330,7 +334,20 @@ function Commands( {
 				return;
 			}
 
-			// Re-resolve remaining params so dependent options can update.
+			// Immediately transition to the next param menu so the user sees
+			// progress instead of waiting on the current menu.
+			setParamSelectionHistory( prev => [ ...prev, paramSelection ] );
+			setParamSelection( {
+				command: paramSelection.command,
+				path: updatedPath,
+				pending: remaining,
+				selections: updatedSelections,
+				breadcrumbs: updatedBreadcrumbs,
+			} );
+
+			// Re-resolve remaining params in the background so dependent
+			// options can load.  The list shows a loading indicator until
+			// this completes.
 			const gen = ++resolveGenRef.current;
 			setResolving( true );
 			void resolveRoute( updatedPath, resolver, updatedSelections )
@@ -373,6 +390,23 @@ function Commands( {
 		]
 	);
 
+	const stepBackParamSelection = useCallback( () => {
+		resolveGenRef.current += 1;
+		searchGenRef.current += 1;
+		isInitialSearchRef.current = true;
+		setResolving( false );
+		setParamSearch( '' );
+
+		if ( paramSelectionHistory.length === 0 ) {
+			resetParamSelection();
+			return;
+		}
+
+		const previous = paramSelectionHistory[ paramSelectionHistory.length - 1 ];
+		setParamSelectionHistory( prev => prev.slice( 0, -1 ) );
+		setParamSelection( previous );
+	}, [ paramSelectionHistory, resetParamSelection ] );
+
 	const handleParamKeyDown = useCallback(
 		( event: React.KeyboardEvent< HTMLInputElement > ) => {
 			if ( resolveError && event.key === 'Backspace' ) {
@@ -381,10 +415,10 @@ function Commands( {
 			}
 
 			if ( event.key === 'Backspace' && event.currentTarget.value === '' ) {
-				resetParamSelection();
+				stepBackParamSelection();
 			}
 		},
-		[ resetParamSelection, resolveError ]
+		[ resetParamSelection, resolveError, stepBackParamSelection ]
 	);
 
 	const currentParam = paramSelection?.pending[ 0 ] ?? null;
@@ -502,6 +536,7 @@ function Commands( {
 			>
 				<CommandListContent
 					resolveError={ resolveError }
+					resolving={ resolving }
 					paramSelection={ paramSelection }
 					currentParam={ currentParam }
 					emptyState={ resolvedEmptyState }

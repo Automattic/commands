@@ -9,10 +9,12 @@ const themeAttributes = {
 	itemDescription: { 'cmdk-item-description': '' },
 	itemShortcut: { 'cmdk-item-shortcut': '' },
 	error: { 'cmdk-error': '' },
+	loading: { 'cmdk-loading': '' },
 } as const;
 
 export function CommandListContent( {
 	resolveError,
+	resolving,
 	paramSelection,
 	currentParam,
 	emptyState,
@@ -67,8 +69,15 @@ export function CommandListContent( {
 		);
 	}
 
-	// Selecting a param, but no options are available.
+	// Selecting a param, but no options are available yet.
 	if ( ! currentParam?.options ) {
+		if ( resolving ) {
+			return (
+				<div { ...themeAttributes.loading } role="status">
+					{ localeText.loading }
+				</div>
+			);
+		}
 		return (
 			<CommandPrimitive.Empty>
 				{ localeText.noOptionsAvailable( currentParam?.name ?? '' ) }

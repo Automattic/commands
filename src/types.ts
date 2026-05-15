@@ -227,6 +227,7 @@ export interface CommandsProps {
 
 export interface CommandListContentProps {
 	resolveError: string | null;
+	resolving: boolean;
 	paramSelection: ParamSelectionState | null;
 	currentParam: UnresolvedParam | null;
 	emptyState: CommandsProps[ 'emptyState' ];
