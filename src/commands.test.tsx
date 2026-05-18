@@ -1602,6 +1602,142 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'goes back one step on Backspace instead of resetting to root', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ 'app-one', 'app-two' ];
+				}
+				return [ 'prod', 'dev' ];
+			};
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// First param: appId options
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+			} );
+
+			// Select app-one to advance to env
+			const appIdInput = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.keyDown( appIdInput, { key: 'Enter' } );
+
+			// Second param: env options
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+			} );
+
+			// Backspace on empty env input should go back to appId, not root
+			const envInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( envInput, { key: 'Backspace' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'app-two' ) ).toBeInTheDocument();
+			} );
+			expect( screen.queryByText( 'prod' ) ).not.toBeInTheDocument();
+
+			// Breadcrumb should show only the command title (back to first param)
+			const trail = screen.getByLabelText( 'Selection context' );
+			expect( within( trail ).getByText( 'Audit' ) ).toBeInTheDocument();
+			expect( within( trail ).queryByText( 'app-one' ) ).not.toBeInTheDocument();
+		} );
+
+		it( 'goes back to root on Backspace from the first param', async () => {
+			const resolver = () => [ 'app-one', 'app-two' ];
+			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+			} );
+
+			// Backspace on the first param should go to root command list
+			const paramInput = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.keyDown( paramInput, { key: 'Backspace' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Logs' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'app-one' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
+		it( 'can navigate back multiple steps to root', async () => {
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ 'app-one' ];
+				}
+				return [ 'prod' ];
+			};
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Select appId
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+			} );
+			const appIdInput = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.keyDown( appIdInput, { key: 'Enter' } );
+
+			// On env param
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+			} );
+
+			// Back to appId
+			const envInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.keyDown( envInput, { key: 'Backspace' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+			} );
+
+			// Back to root
+			const appIdInput2 = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.keyDown( appIdInput2, { key: 'Backspace' } );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Audit' ) ).toBeInTheDocument();
+				expect( screen.queryByText( 'app-one' ) ).not.toBeInTheDocument();
+				expect( screen.queryByLabelText( 'Selection context' ) ).not.toBeInTheDocument();
+			} );
+		} );
+
 		it( 'shows the sub-layer when params are unresolved without options', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => [];
@@ -1677,6 +1813,125 @@ describe( 'Commands', () => {
 			finish( '42' );
 
 			// Spinner disappears
+			await waitFor( () => {
+				expect(
+					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
+				).not.toBeInTheDocument();
+			} );
+		} );
+
+		it( 'immediately transitions to next param menu and shows loading while resolving', async () => {
+			let finishEnvResolve: ( value: string[] ) => void = () => {};
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ 'app-one', 'app-two' ];
+				}
+				return new Promise< string[] >( resolve => {
+					finishEnvResolve = resolve;
+				} );
+			};
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// First param: appId options appear
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+			} );
+
+			// Select app-one — should immediately move to env menu
+			const appIdInput = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
+			fireEvent.keyDown( appIdInput, { key: 'Enter' } );
+
+			// Should immediately be on the env menu with loading, not stuck on appId
+			await waitFor( () => {
+				const loadingEl = screen.getByText( 'Loading...' );
+				expect( loadingEl ).toBeInTheDocument();
+				expect( loadingEl.closest( '[cmdk-loading]' ) ).toBeInTheDocument();
+			} );
+
+			// Breadcrumb shows the selected appId; option list does not
+			const trail = screen.getByLabelText( 'Selection context' );
+			expect( within( trail ).getByText( 'app-one' ) ).toBeInTheDocument();
+			const list = screen.getByRole( 'listbox', { name: 'Suggestions' } );
+			expect( within( list ).queryByText( 'app-one' ) ).not.toBeInTheDocument();
+
+			// Finish the async resolve
+			finishEnvResolve( [ 'prod', 'staging' ] );
+
+			// Options replace the loading state
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+				expect( screen.getByText( 'staging' ) ).toBeInTheDocument();
+			} );
+		} );
+
+		it( 'shows existing options while re-resolving in background', async () => {
+			let callCount = 0;
+			let finishSecondResolve: ( value: string[] ) => void = () => {};
+			const resolver = ( param: string ) => {
+				if ( param === 'appId' ) {
+					return [ 'app-one' ];
+				}
+				callCount++;
+				if ( callCount === 1 ) {
+					return [ 'prod', 'staging' ];
+				}
+				return new Promise< string[] >( resolve => {
+					finishSecondResolve = resolve;
+				} );
+			};
+			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
+
+			render(
+				<Commands
+					commands={ commands }
+					triggerKey="Meta+k"
+					resolver={ resolver }
+					showRecent={ false }
+				/>
+			);
+			await openPaletteAndWait();
+
+			const input = screen.getByPlaceholderText( 'Search commands...' );
+			fireEvent.keyDown( input, { key: 'Enter' } );
+
+			// Select appId
+			await waitFor( () => {
+				expect( screen.getByText( 'app-one' ) ).toBeInTheDocument();
+			} );
+			fireEvent.keyDown( screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' ), {
+				key: 'Enter',
+			} );
+
+			// Env options appear after first resolve
+			await waitFor( () => {
+				expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+			} );
+
+			// Type to trigger search-based re-resolve (debounced)
+			const envInput = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
+			fireEvent.change( envInput, { target: { value: 'pr' } } );
+
+			// Options remain visible during the search re-resolve
+			await waitFor( () => {
+				expect( screen.getByRole( 'progressbar', { name: 'Loading...' } ) ).toBeInTheDocument();
+			} );
+			expect( screen.getByText( 'prod' ) ).toBeInTheDocument();
+
+			finishSecondResolve( [ 'prod' ] );
+
 			await waitFor( () => {
 				expect(
 					screen.queryByRole( 'progressbar', { name: 'Loading...' } )
@@ -1780,6 +2035,9 @@ describe( 'Commands', () => {
 			const input = screen.getByPlaceholderText( 'Route resolution failed. Backspace to cancel.' );
 			expect( input ).toHaveValue( 'Log' );
 
+			// Clear the input first — the handler only fires on Backspace
+			// when the input is empty.
+			fireEvent.change( input, { target: { value: '' } } );
 			fireEvent.keyDown( input, { key: 'Backspace' } );
 
 			await waitFor( () => {
