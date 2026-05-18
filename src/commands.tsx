@@ -409,16 +409,12 @@ function Commands( {
 
 	const handleParamKeyDown = useCallback(
 		( event: React.KeyboardEvent< HTMLInputElement > ) => {
-			if ( resolveError && event.key === 'Backspace' ) {
-				resetParamSelection();
-				return;
-			}
-
 			if ( event.key === 'Backspace' && event.currentTarget.value === '' ) {
+				setResolveError( null );
 				stepBackParamSelection();
 			}
 		},
-		[ resetParamSelection, resolveError, stepBackParamSelection ]
+		[ stepBackParamSelection ]
 	);
 
 	const currentParam = paramSelection?.pending[ 0 ] ?? null;

@@ -2035,6 +2035,9 @@ describe( 'Commands', () => {
 			const input = screen.getByPlaceholderText( 'Route resolution failed. Backspace to cancel.' );
 			expect( input ).toHaveValue( 'Log' );
 
+			// Clear the input first — the handler only fires on Backspace
+			// when the input is empty.
+			fireEvent.change( input, { target: { value: '' } } );
 			fireEvent.keyDown( input, { key: 'Backspace' } );
 
 			await waitFor( () => {
