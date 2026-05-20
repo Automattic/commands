@@ -154,20 +154,6 @@ type CommandPaletteEvent =
 	  };
 ```
 
-### Utility exports
-
-The package also exports route-resolution helpers:
-
-```ts
-import { resolveRoute, extractParams, replaceRouteParam } from '@automattic/commands';
-```
-
-| Function            | Signature                                                       | Description                                                                                                                            |
-| ------------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `extractParams`     | `(route: string) => string[]`                                   | Extracts `:param` names from a route. `"/apps/:id/logs"` → `["id"]`.                                                                   |
-| `replaceRouteParam` | `(route: string, name: string, value: string) => string`        | Replaces a single named parameter in a route string.                                                                                   |
-| `resolveRoute`      | `(request: ResolveRouteRequest) => Promise<ResolveRouteResult>` | Runs the full resolution pipeline: extract params → call resolver per param → return resolved path, unresolved params, and selections. |
-
 ### Types
 
 ```ts
@@ -177,35 +163,20 @@ import type {
 	CommandsLocaleText,
 	CommandsProps,
 	ResolvedParam,
-	ResolveRouteRequest,
-	ResolveRouteResult,
 	Resolver,
-	ResolverContext,
 	ResolverRequest,
-	ResultItemType,
-	UnresolvedParam,
 } from '@automattic/commands';
 ```
 
 **`CommandsLocaleText`** — localizable strings and callbacks used for package-owned palette chrome.
 
-**`ResultItemType`** — `'command' | 'option'`. Passed to result-count message callbacks so consumers can localize the whole sentence.
-
-**`ResolvedParam`** — `string | ResolvedOption[]`. A string means the param is fully resolved; an array means the palette shows a sub-layer for the user to pick one.
-
-**`ResolveRouteResult`** — `{ path: string; unresolved: UnresolvedParam[]; selections: Record<string, string> }`. The path with resolved params replaced, unresolved params listed with optional selectable options, and accumulated param selections.
-
-**`UnresolvedParam`** — `{ name: string; options?: ResolvedOption[] }`. A param that still needs a value, optionally with options for the user to choose from.
-
-**`ResolvedOption`** — `string | LabeledValue`. A param-selection option. Plain strings render as a single-line item using the string itself as both the display label and the route value. Use `LabeledValue` when you want a different display label, or to attach an icon, description, or extra search keywords.
+**`ResolvedParam`** — `string | Array<string | LabeledValue>`. A string means the param is fully resolved; an array means the palette shows a sub-layer for the user to pick one.
 
 **`LabeledValue`** — `{ label: string; value: string; description?: string; icon?: ReactNode; keywords?: string[] }`. The `label` shows in the option row (and breadcrumb); `value` is what gets substituted into the route. Optional `icon`, `description`, and `keywords` mirror the corresponding fields on `Command`.
 
-**`ResolverRequest`** — `{ param: string; selections: Record<string, string>; search: string; context: ResolverContext }`. The request object passed to `resolver`.
+**`Resolver`** — `(request: ResolverRequest) => ResolvedParam | Promise<ResolvedParam>`. The function signature used by the `resolver` prop.
 
-**`ResolverContext`** — `{ command: Command }`. Identifies the command currently being resolved.
-
-**`ResolveRouteRequest`** — `{ route: string; resolver?: Resolver; selections?: Record<string, string>; search?: string; context?: ResolverContext }`. The request object passed to `resolveRoute`. `context` is required when a resolver is provided.
+**`ResolverRequest`** — `{ param: string; selections: Record<string, string>; search: string; context: { command: Command } }`. The request object passed to `resolver`.
 
 ## Resolver pattern
 
@@ -218,7 +189,7 @@ Routes can contain `:param` placeholders that are resolved at runtime via the `r
 3. `request.selections` contains values from earlier params, including auto-resolved strings and user-selected options. `request.search` is the current text typed while choosing param options, or an empty string during initial resolution. `request.context.command` is the command currently being resolved.
 4. For each param, the resolver returns:
    - A **string** → the param is replaced in the path immediately, added to `selections`, and the next param is resolved.
-   - A **`ResolvedOption[]`** array → the palette shows a sub-layer where the user picks one option. Each entry can be a plain string or a `LabeledValue` carrying an icon, description, and search keywords. Remaining params are resolved after the user selects a value.
+   - An **array of options** → the palette shows a sub-layer where the user picks one option. Each entry can be a plain string or a `LabeledValue` carrying an icon, description, and search keywords. Remaining params are resolved after the user selects a value.
    - **Anything else** → the param is listed as unresolved with no options.
 5. While the resolver runs, a small spinner appears on the right side of the search input and the previously visible items stay in place; the new options replace them as soon as the resolver settles.
 6. While the user is several levels deep, a breadcrumb at the top of the palette shows the originating command title followed by each picked option's label, so the path is visible without leaving the active param input.
