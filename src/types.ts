@@ -67,6 +67,32 @@ export interface ResolverContext {
 	command: Command;
 }
 
+export interface ResolverRequest {
+	/** The route parameter currently being resolved. */
+	param: string;
+	/** Accumulated param values resolved so far. */
+	selections: Record< string, string >;
+	/** Current search text typed by the user while selecting this param. */
+	search: string;
+	/** Context for the command currently being resolved. */
+	context: ResolverContext;
+}
+
+export type Resolver = ( request: ResolverRequest ) => ResolvedParam | Promise< ResolvedParam >;
+
+export interface ResolveRouteRequest {
+	/** Route with optional variables: "/apps/:id/logs". */
+	route: string;
+	/** Resolves a single route variable at runtime. */
+	resolver?: Resolver;
+	/** Accumulated param values resolved so far. */
+	selections?: Record< string, string >;
+	/** Current search text typed by the user while selecting this param. */
+	search?: string;
+	/** Context for the command currently being resolved. Required when a resolver is provided. */
+	context?: ResolverContext;
+}
+
 export interface ParamSelectionState {
 	/** The command currently being resolved */
 	command: Command;
@@ -176,10 +202,10 @@ export interface CommandsProps {
 
 	/**
 	 * Resolves a single route variable at runtime.
-	 * Called once per `:param` in left-to-right order. Receives the param name,
-	 * a record of already-resolved values, and the current search text typed
-	 * by the user (empty string on initial resolution). When a route command
-	 * is being resolved, receives context containing that command.
+	 * Called once per `:param` in left-to-right order. Receives a request
+	 * object containing the param name, already-resolved values, current
+	 * search text (empty string on initial resolution), and the command
+	 * currently being resolved.
 	 *
 	 * Return a string to auto-fill the param (the palette moves to the next
 	 * param immediately). Return an array to show a sub-layer where the user
@@ -187,12 +213,7 @@ export interface CommandsProps {
 	 * object. The resolver is re-called with updated search text as the user
 	 * types, enabling server-side filtering of large option sets.
 	 */
-	resolver?: (
-		param: string,
-		selections: Record< string, string >,
-		search: string,
-		context?: ResolverContext
-	) => ResolvedParam | Promise< ResolvedParam >;
+	resolver?: Resolver;
 
 	/** Called when a route command is selected with the fully resolved path */
 	onNavigate?: ( path: string ) => void;

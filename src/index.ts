@@ -8,8 +8,11 @@ export type {
 	LabeledValue,
 	ResolvedOption,
 	ResolvedParam,
+	ResolveRouteRequest,
 	ResolveRouteResult,
+	Resolver,
 	ResolverContext,
+	ResolverRequest,
 	ResultItemType,
 	UnresolvedParam,
 } from './types';
