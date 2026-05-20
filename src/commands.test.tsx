@@ -2264,7 +2264,9 @@ describe( 'theme CSS contract', () => {
 			'--cmdk-item-selected-indicator',
 			'--cmdk-item-selected-border-width',
 			'--cmdk-item-selected-icon-color',
+			'--cmdk-item-selected-description-color',
 			'--cmdk-input-focus-border',
+			'--cmdk-input-icon-fill',
 		];
 
 		for ( const variableName of requiredVariables ) {
