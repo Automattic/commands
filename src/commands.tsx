@@ -151,6 +151,7 @@ function Commands( {
 	localeText,
 	filter,
 	emptyState,
+	searchIcon,
 	triggerKey = 'Mod+k',
 	onNavigate,
 	onEvent,
@@ -509,7 +510,7 @@ function Commands( {
 				/>
 			) }
 			<div { ...themeAttributes.inputWrapper }>
-				<SearchIcon />
+				{ searchIcon ?? <SearchIcon /> }
 				<CommandPrimitive.Input
 					aria-label={ inputLabel }
 					placeholder={ inputPlaceholder }

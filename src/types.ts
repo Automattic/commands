@@ -215,6 +215,9 @@ export interface CommandsProps {
 	/** Custom empty state content shown when no commands match the search */
 	emptyState?: ReactNode;
 
+	/** Custom icon element rendered inside the search input. Defaults to a magnifying-glass SVG. */
+	searchIcon?: ReactNode;
+
 	/** Show recently selected commands when search is empty. Default: `true` */
 	showRecent?: boolean;
 

@@ -372,6 +372,21 @@ describe( 'Commands', () => {
 			} );
 		} );
 
+		it( 'renders a custom search icon when searchIcon is provided', async () => {
+			render(
+				<Commands
+					commands={ mixedCommands }
+					triggerKey="Meta+k"
+					searchIcon={ <span data-testid="custom-search-icon">🔍</span> }
+				/>
+			);
+			openPalette();
+
+			await waitFor( () => {
+				expect( screen.getByTestId( 'custom-search-icon' ) ).toBeInTheDocument();
+			} );
+		} );
+
 		it( 'renders package-owned cmdk attribute hooks for theming', async () => {
 			const commands = [
 				cmd( {
@@ -2247,6 +2262,9 @@ describe( 'theme CSS contract', () => {
 			'--cmdk-radius',
 			'--cmdk-max-height',
 			'--cmdk-item-selected-indicator',
+			'--cmdk-item-selected-border-width',
+			'--cmdk-item-selected-icon-color',
+			'--cmdk-input-focus-border',
 		];
 
 		for ( const variableName of requiredVariables ) {
