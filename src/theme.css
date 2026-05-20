@@ -18,7 +18,7 @@
 	background: var( --cmdk-bg, var( --wpds-color-bg-surface-neutral, #fff ) );
 	border: var( --cmdk-dialog-border-width, 1px ) solid
 		var( --cmdk-border, var( --wpds-color-stroke-surface-neutral-weak, #dcdcde ) );
-	border-radius: var( --cmdk-radius, var( --wpds-radius-medium, 4px ) );
+	border-radius: var( --cmdk-radius, var( --wpds-radius-medium, 8px ) );
 	box-shadow: var( --cmdk-shadow, 0 16px 40px rgba( 0, 0, 0, 0.12 ) );
 	z-index: var( --cmdk-dialog-z, 1000 );
 	overflow: hidden;
@@ -83,10 +83,13 @@
 }
 
 [cmdk-input-wrapper]:focus-within {
-	border-bottom-color: var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) );
+	border-bottom-color: var(
+		--cmdk-input-focus-border,
+		var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) )
+	);
 	box-shadow: var(
 		--cmdk-input-focus-shadow,
-		inset 0 -1px 0 var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) )
+		inset 0 -1px 0 var( --cmdk-input-focus-border, var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) ) )
 	);
 }
 
@@ -182,10 +185,17 @@
 
 [cmdk-item][data-selected='true'] {
 	background: var( --cmdk-item-selected-bg, var( --wpds-color-bg-surface-neutral-weak, #f6f7f7 ) );
-	border-left: 3px solid
+	border-left: var( --cmdk-item-selected-border-width, 3px ) solid
 		var( --cmdk-item-selected-indicator, var( --cmdk-focus, var( --wpds-color-focus, #3858e9 ) ) );
-	margin-left: -3px;
+	margin-left: calc( var( --cmdk-item-selected-border-width, 3px ) * -1 );
 	color: var( --cmdk-item-selected-text, var( --wpds-color-fg-content-neutral, #1e1e1e ) );
+}
+
+[cmdk-item][data-selected='true'] [cmdk-item-icon] {
+	color: var(
+		--cmdk-item-selected-icon-color,
+		var( --cmdk-icon-color, var( --wpds-color-fg-content-neutral-subtle, #646970 ) )
+	);
 }
 
 [cmdk-item][data-disabled='true'] {
