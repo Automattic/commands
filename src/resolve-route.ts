@@ -1,6 +1,6 @@
 import { warnInNonProduction } from './utils/logging';
 
-import type { CommandsProps, ResolveRouteResult } from './types';
+import type { CommandsProps, ResolveRouteResult, ResolverContext } from './types';
 
 const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)(?=[/?#]|$)/g;
 
@@ -49,7 +49,8 @@ export async function resolveRoute(
 	route: string,
 	resolver?: CommandsProps[ 'resolver' ],
 	selections: Record< string, string > = {},
-	search: string = ''
+	search: string = '',
+	context?: ResolverContext
 ): Promise< ResolveRouteResult > {
 	const paramNames = extractParams( route );
 
@@ -69,8 +70,13 @@ export async function resolveRoute(
 	const accumulated = { ...selections };
 
 	for ( const [ idx, name ] of paramNames.entries() ) {
+		const selectionsSnapshot = { ...accumulated };
+		const resolved = context
+			? resolver( name, selectionsSnapshot, search, context )
+			: resolver( name, selectionsSnapshot, search );
+
 		// eslint-disable-next-line no-await-in-loop -- sequential resolution is intentional
-		const value = await resolver( name, accumulated, search );
+		const value = await resolved;
 
 		if ( typeof value === 'string' ) {
 			path = replaceRouteParam( path, name, value );

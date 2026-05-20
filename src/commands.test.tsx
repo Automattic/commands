@@ -939,6 +939,32 @@ describe( 'Commands', () => {
 	/* --- route resolution --- */
 
 	describe( 'route resolution', () => {
+		it( 'passes selected command context to the resolver', async () => {
+			const command = {
+				id: 'node-software-version',
+				title: 'Software Versions - Node.js',
+				route: '/apps/:application/:environment/code/software-versions?stack=nodejs',
+			};
+			const resolver = vi.fn( () => [ { label: 'Node App', value: '123' } ] );
+			render( <Commands commands={ [ command ] } triggerKey="Meta+k" resolver={ resolver } /> );
+
+			dispatchKey( 'k', { meta: true } );
+			await waitFor( () => {
+				expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
+			} );
+			fireEvent.click( screen.getByText( 'Software Versions - Node.js' ) );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Node App' ) ).toBeInTheDocument();
+			} );
+			expect( resolver ).toHaveBeenCalledWith(
+				'application',
+				{},
+				'',
+				expect.objectContaining( { command } )
+			);
+		} );
+
 		it( 'navigates to a resolved route when all params are resolved', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => '42';
@@ -1256,7 +1282,12 @@ describe( 'Commands', () => {
 			} );
 
 			// First call: resolver received 'appId' with empty selections and empty search
-			expect( resolver ).toHaveBeenCalledWith( 'appId', {}, '' );
+			expect( resolver ).toHaveBeenCalledWith(
+				'appId',
+				{},
+				'',
+				expect.objectContaining( { command: commands[ 0 ] } )
+			);
 
 			// Select app-one
 			input = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
@@ -1269,7 +1300,12 @@ describe( 'Commands', () => {
 			} );
 
 			// Second call: resolver received 'env' with appId selection and empty search
-			expect( resolver ).toHaveBeenCalledWith( 'env', { appId: 'app-one' }, '' );
+			expect( resolver ).toHaveBeenCalledWith(
+				'env',
+				{ appId: 'app-one' },
+				'',
+				expect.objectContaining( { command: commands[ 0 ] } )
+			);
 
 			// Select prod
 			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
@@ -1417,6 +1453,7 @@ describe( 'Commands', () => {
 		} );
 
 		it( 're-calls the resolver with search text during param selection', async () => {
+			const command = cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } );
 			const resolver = vi.fn().mockImplementation( ( _p: string, _s: unknown, search: string ) => {
 				if ( search === '' ) {
 					return [
@@ -1426,11 +1463,10 @@ describe( 'Commands', () => {
 				}
 				return [ { label: 'Beta App', value: '2' } ];
 			} );
-			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
 			render(
 				<Commands
-					commands={ commands }
+					commands={ [ command ] }
 					triggerKey="Meta+k"
 					resolver={ resolver }
 					showRecent={ false }
@@ -1453,7 +1489,12 @@ describe( 'Commands', () => {
 
 			// Wait for the 300ms debounce + resolver call
 			await waitFor( () => {
-				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'Beta' );
+				expect( resolver ).toHaveBeenCalledWith(
+					'appId',
+					{},
+					'Beta',
+					expect.objectContaining( { command } )
+				);
 			} );
 		} );
 
@@ -1491,14 +1532,24 @@ describe( 'Commands', () => {
 			fireEvent.change( paramInput, { target: { value: 'Beta' } } );
 
 			await waitFor( () => {
-				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'Beta' );
+				expect( resolver ).toHaveBeenCalledWith(
+					'appId',
+					{},
+					'Beta',
+					expect.objectContaining( { command: commands[ 0 ] } )
+				);
 			} );
 
 			// Clear the input — should re-call resolver with empty search
 			fireEvent.change( paramInput, { target: { value: '' } } );
 
 			await waitFor( () => {
-				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, '' );
+				expect( resolver ).toHaveBeenCalledWith(
+					'appId',
+					{},
+					'',
+					expect.objectContaining( { command: commands[ 0 ] } )
+				);
 			} );
 		} );
 

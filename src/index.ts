@@ -9,6 +9,7 @@ export type {
 	ResolvedOption,
 	ResolvedParam,
 	ResolveRouteResult,
+	ResolverContext,
 	ResultItemType,
 	UnresolvedParam,
 } from './types';

@@ -311,4 +311,34 @@ describe( 'resolveRoute', () => {
 
 		expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'my query' );
 	} );
+
+	it( 'passes command context to the resolver', async () => {
+		const command = {
+			id: 'logs-runtime-batch',
+			title: 'Runtime Logs - Batch',
+			route: '/apps/:application/:environment/logs/runtime?logsType=batch',
+		};
+		const resolver = vi.fn( ( param: string ) => {
+			if ( param === 'application' ) {
+				return '123';
+			}
+
+			return [ 'production' ];
+		} );
+
+		await resolveRoute( command.route, resolver, {}, '', { command } );
+
+		expect( resolver ).toHaveBeenCalledWith(
+			'application',
+			{},
+			'',
+			expect.objectContaining( { command } )
+		);
+		expect( resolver ).toHaveBeenCalledWith(
+			'environment',
+			{ application: '123' },
+			'',
+			expect.objectContaining( { command } )
+		);
+	} );
 } );

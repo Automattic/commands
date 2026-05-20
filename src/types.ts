@@ -62,6 +62,11 @@ export interface Command {
 	shortcut?: string;
 }
 
+export interface ResolverContext {
+	/** The command currently being resolved. */
+	command: Command;
+}
+
 export interface ParamSelectionState {
 	/** The command currently being resolved */
 	command: Command;
@@ -173,7 +178,8 @@ export interface CommandsProps {
 	 * Resolves a single route variable at runtime.
 	 * Called once per `:param` in left-to-right order. Receives the param name,
 	 * a record of already-resolved values, and the current search text typed
-	 * by the user (empty string on initial resolution).
+	 * by the user (empty string on initial resolution). When a route command
+	 * is being resolved, receives context containing that command.
 	 *
 	 * Return a string to auto-fill the param (the palette moves to the next
 	 * param immediately). Return an array to show a sub-layer where the user
@@ -184,7 +190,8 @@ export interface CommandsProps {
 	resolver?: (
 		param: string,
 		selections: Record< string, string >,
-		search: string
+		search: string,
+		context?: ResolverContext
 	) => ResolvedParam | Promise< ResolvedParam >;
 
 	/** Called when a route command is selected with the fully resolved path */
