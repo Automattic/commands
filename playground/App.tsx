@@ -93,7 +93,7 @@ const envsByApp: Record< string, string[] > = {
 	'my-other-app': [ 'production', 'staging', 'development' ],
 };
 
-const resolver: CommandsProps[ 'resolver' ] = async ( param, selections ) => {
+const resolver: CommandsProps[ 'resolver' ] = async ( { param, selections } ) => {
 	if ( param === 'appId' ) {
 		return [
 			{

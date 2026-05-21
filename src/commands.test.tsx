@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Commands } from './commands';
 import { cmd, dispatchKey } from './test-utils';
 
-import type { Command } from './types';
+import type { Command, ResolverRequest } from './types';
 
 /* ---------- helpers ---------- */
 
@@ -83,7 +83,7 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'resets param selection when closed via trigger key', async () => {
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return '42';
 				}
@@ -244,7 +244,7 @@ describe( 'Commands', () => {
 		it( 'emits an execute event with selected route params', async () => {
 			const onEvent = vi.fn();
 			const onNavigate = vi.fn();
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return '42';
 				}
@@ -939,6 +939,34 @@ describe( 'Commands', () => {
 	/* --- route resolution --- */
 
 	describe( 'route resolution', () => {
+		it( 'passes selected command context to the resolver', async () => {
+			const command = {
+				id: 'node-software-version',
+				title: 'Software Versions - Node.js',
+				route: '/apps/:application/:environment/code/software-versions?stack=nodejs',
+			};
+			const resolver = vi.fn( () => [ { label: 'Node App', value: '123' } ] );
+			render( <Commands commands={ [ command ] } triggerKey="Meta+k" resolver={ resolver } /> );
+
+			dispatchKey( 'k', { meta: true } );
+			await waitFor( () => {
+				expect( screen.getByRole( 'dialog' ) ).toBeInTheDocument();
+			} );
+			fireEvent.click( screen.getByText( 'Software Versions - Node.js' ) );
+
+			await waitFor( () => {
+				expect( screen.getByText( 'Node App' ) ).toBeInTheDocument();
+			} );
+			expect( resolver ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					param: 'application',
+					selections: {},
+					search: '',
+					context: { command },
+				} )
+			);
+		} );
+
 		it( 'navigates to a resolved route when all params are resolved', async () => {
 			const onNavigate = vi.fn();
 			const resolver = () => '42';
@@ -1018,7 +1046,7 @@ describe( 'Commands', () => {
 	describe( 'param selection sub-layer', () => {
 		it( 'shows options when resolver returns an array for a param', async () => {
 			const onNavigate = vi.fn();
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return '42';
 				}
@@ -1053,7 +1081,7 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'labels param selection input and announces option counts', async () => {
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return '42';
 				}
@@ -1081,7 +1109,7 @@ describe( 'Commands', () => {
 
 		it( 'navigates after selecting an option', async () => {
 			const onNavigate = vi.fn();
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return '42';
 				}
@@ -1123,7 +1151,7 @@ describe( 'Commands', () => {
 
 		it( 'steps through multiple unresolved params sequentially', async () => {
 			const onNavigate = vi.fn();
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return [ 'app-one', 'app-two' ];
 				}
@@ -1175,7 +1203,7 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'exits param selection on Backspace even after prior command search', async () => {
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return '42';
 				}
@@ -1223,17 +1251,15 @@ describe( 'Commands', () => {
 
 		it( 're-resolves remaining params with selections after each pick', async () => {
 			const onNavigate = vi.fn();
-			const resolver = vi
-				.fn()
-				.mockImplementation( ( param: string, selections: Record< string, string > ) => {
-					if ( param === 'appId' ) {
-						return [ 'app-one', 'app-two' ];
-					}
-					if ( selections.appId === 'app-one' ) {
-						return [ 'prod', 'staging' ];
-					}
-					return [ 'dev', 'canary' ];
-				} );
+			const resolver = vi.fn().mockImplementation( ( { param, selections }: ResolverRequest ) => {
+				if ( param === 'appId' ) {
+					return [ 'app-one', 'app-two' ];
+				}
+				if ( selections.appId === 'app-one' ) {
+					return [ 'prod', 'staging' ];
+				}
+				return [ 'dev', 'canary' ];
+			} );
 			const commands = [ cmd( { id: 'audit', title: 'Audit', route: '/apps/:appId/:env/audit' } ) ];
 
 			render(
@@ -1256,7 +1282,14 @@ describe( 'Commands', () => {
 			} );
 
 			// First call: resolver received 'appId' with empty selections and empty search
-			expect( resolver ).toHaveBeenCalledWith( 'appId', {}, '' );
+			expect( resolver ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					param: 'appId',
+					selections: {},
+					search: '',
+					context: { command: commands[ 0 ] },
+				} )
+			);
 
 			// Select app-one
 			input = screen.getByPlaceholderText( 'Select appId. Backspace to cancel.' );
@@ -1269,7 +1302,14 @@ describe( 'Commands', () => {
 			} );
 
 			// Second call: resolver received 'env' with appId selection and empty search
-			expect( resolver ).toHaveBeenCalledWith( 'env', { appId: 'app-one' }, '' );
+			expect( resolver ).toHaveBeenCalledWith(
+				expect.objectContaining( {
+					param: 'env',
+					selections: { appId: 'app-one' },
+					search: '',
+					context: { command: commands[ 0 ] },
+				} )
+			);
 
 			// Select prod
 			input = screen.getByPlaceholderText( 'Select env. Backspace to cancel.' );
@@ -1282,7 +1322,7 @@ describe( 'Commands', () => {
 
 		it( 'shows labels for labeled-value options and navigates with the value', async () => {
 			const onNavigate = vi.fn();
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return [
 						{ label: 'My App', value: '42' },
@@ -1417,7 +1457,8 @@ describe( 'Commands', () => {
 		} );
 
 		it( 're-calls the resolver with search text during param selection', async () => {
-			const resolver = vi.fn().mockImplementation( ( _p: string, _s: unknown, search: string ) => {
+			const command = cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } );
+			const resolver = vi.fn().mockImplementation( ( { search }: ResolverRequest ) => {
 				if ( search === '' ) {
 					return [
 						{ label: 'Alpha App', value: '1' },
@@ -1426,11 +1467,10 @@ describe( 'Commands', () => {
 				}
 				return [ { label: 'Beta App', value: '2' } ];
 			} );
-			const commands = [ cmd( { id: 'logs', title: 'Logs', route: '/apps/:appId/logs' } ) ];
 
 			render(
 				<Commands
-					commands={ commands }
+					commands={ [ command ] }
 					triggerKey="Meta+k"
 					resolver={ resolver }
 					showRecent={ false }
@@ -1453,12 +1493,19 @@ describe( 'Commands', () => {
 
 			// Wait for the 300ms debounce + resolver call
 			await waitFor( () => {
-				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'Beta' );
+				expect( resolver ).toHaveBeenCalledWith(
+					expect.objectContaining( {
+						param: 'appId',
+						selections: {},
+						search: 'Beta',
+						context: { command },
+					} )
+				);
 			} );
 		} );
 
 		it( 're-calls the resolver with empty search when the user clears the input', async () => {
-			const resolver = vi.fn().mockImplementation( ( _p: string, _s: unknown, search: string ) => {
+			const resolver = vi.fn().mockImplementation( ( { search }: ResolverRequest ) => {
 				if ( search === 'Beta' ) {
 					return [ { label: 'Beta App', value: '2' } ];
 				}
@@ -1491,19 +1538,33 @@ describe( 'Commands', () => {
 			fireEvent.change( paramInput, { target: { value: 'Beta' } } );
 
 			await waitFor( () => {
-				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, 'Beta' );
+				expect( resolver ).toHaveBeenCalledWith(
+					expect.objectContaining( {
+						param: 'appId',
+						selections: {},
+						search: 'Beta',
+						context: { command: commands[ 0 ] },
+					} )
+				);
 			} );
 
 			// Clear the input — should re-call resolver with empty search
 			fireEvent.change( paramInput, { target: { value: '' } } );
 
 			await waitFor( () => {
-				expect( resolver ).toHaveBeenCalledWith( 'appId', {}, '' );
+				expect( resolver ).toHaveBeenCalledWith(
+					expect.objectContaining( {
+						param: 'appId',
+						selections: {},
+						search: '',
+						context: { command: commands[ 0 ] },
+					} )
+				);
 			} );
 		} );
 
 		it( 'shows the command title in a breadcrumb at the top during param selection', async () => {
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return [ 'app-one', 'app-two' ];
 				}
@@ -1549,7 +1610,7 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'uses the labeled-value label in the breadcrumb', async () => {
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return [ { label: 'My App', value: '42' } ];
 				}
@@ -1585,7 +1646,7 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'hides the breadcrumb when leaving param selection', async () => {
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return '42';
 				}
@@ -1618,7 +1679,7 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'goes back one step on Backspace instead of resetting to root', async () => {
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return [ 'app-one', 'app-two' ];
 				}
@@ -1701,7 +1762,7 @@ describe( 'Commands', () => {
 		} );
 
 		it( 'can navigate back multiple steps to root', async () => {
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return [ 'app-one' ];
 				}
@@ -1837,7 +1898,7 @@ describe( 'Commands', () => {
 
 		it( 'immediately transitions to next param menu and shows loading while resolving', async () => {
 			let finishEnvResolve: ( value: string[] ) => void = () => {};
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return [ 'app-one', 'app-two' ];
 				}
@@ -1895,7 +1956,7 @@ describe( 'Commands', () => {
 		it( 'shows existing options while re-resolving in background', async () => {
 			let callCount = 0;
 			let finishSecondResolve: ( value: string[] ) => void = () => {};
-			const resolver = ( param: string ) => {
+			const resolver = ( { param }: ResolverRequest ) => {
 				if ( param === 'appId' ) {
 					return [ 'app-one' ];
 				}
@@ -2067,7 +2128,7 @@ describe( 'Commands', () => {
 			const onEvent = vi.fn();
 			const onNavigate = vi.fn();
 			const error = new Error( 'Cannot load env' );
-			const resolver = ( param: string ): Promise< string | string[] > | string[] => {
+			const resolver = ( { param }: ResolverRequest ): Promise< string | string[] > | string[] => {
 				if ( param === 'appId' ) {
 					return [ 'good-app', 'bad-app' ];
 				}

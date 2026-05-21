@@ -264,7 +264,13 @@ function Commands( {
 
 				const gen = ++resolveGenRef.current;
 				setResolving( true );
-				void resolveRoute( item.route, resolver, {} )
+				void resolveRoute( {
+					route: item.route,
+					resolver,
+					selections: {},
+					search: '',
+					context: { command: item },
+				} )
 					.then( result => {
 						if ( gen !== resolveGenRef.current ) {
 							return;
@@ -351,7 +357,13 @@ function Commands( {
 			// this completes.
 			const gen = ++resolveGenRef.current;
 			setResolving( true );
-			void resolveRoute( updatedPath, resolver, updatedSelections )
+			void resolveRoute( {
+				route: updatedPath,
+				resolver,
+				selections: updatedSelections,
+				search: '',
+				context: { command: paramSelection.command },
+			} )
 				.then( result => {
 					if ( gen !== resolveGenRef.current ) {
 						return;
@@ -439,7 +451,14 @@ function Commands( {
 
 		const timeoutId = setTimeout( () => {
 			setResolving( true );
-			void Promise.resolve( resolver( currentParam.name, paramSelection.selections, paramSearch ) )
+			void Promise.resolve(
+				resolver( {
+					param: currentParam.name,
+					selections: paramSelection.selections,
+					search: paramSearch,
+					context: { command: paramSelection.command },
+				} )
+			)
 				.then( result => {
 					if ( gen !== searchGenRef.current ) {
 						return;

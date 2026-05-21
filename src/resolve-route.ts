@@ -1,6 +1,6 @@
 import { warnInNonProduction } from './utils/logging';
 
-import type { CommandsProps, ResolveRouteResult } from './types';
+import type { ResolveRouteRequest, ResolveRouteResult } from './types';
 
 const PARAM_PATTERN = /:([a-zA-Z_][a-zA-Z0-9_]*)(?=[/?#]|$)/g;
 
@@ -45,12 +45,13 @@ export function replaceRouteParam( route: string, name: string, value: string ):
  *    - anything else → stops and lists that param plus remaining params as
  *      unresolved without options.
  */
-export async function resolveRoute(
-	route: string,
-	resolver?: CommandsProps[ 'resolver' ],
-	selections: Record< string, string > = {},
-	search: string = ''
-): Promise< ResolveRouteResult > {
+export async function resolveRoute( {
+	route,
+	resolver,
+	selections = {},
+	search = '',
+	context,
+}: ResolveRouteRequest ): Promise< ResolveRouteResult > {
 	const paramNames = extractParams( route );
 
 	if ( paramNames.length === 0 ) {
@@ -65,12 +66,24 @@ export async function resolveRoute(
 		};
 	}
 
+	if ( ! context ) {
+		throw new Error( 'Resolver context is required.' );
+	}
+
 	let path = route;
 	const accumulated = { ...selections };
 
 	for ( const [ idx, name ] of paramNames.entries() ) {
+		const selectionsSnapshot = { ...accumulated };
+		const resolved = resolver( {
+			param: name,
+			selections: selectionsSnapshot,
+			search,
+			context,
+		} );
+
 		// eslint-disable-next-line no-await-in-loop -- sequential resolution is intentional
-		const value = await resolver( name, accumulated, search );
+		const value = await resolved;
 
 		if ( typeof value === 'string' ) {
 			path = replaceRouteParam( path, name, value );
